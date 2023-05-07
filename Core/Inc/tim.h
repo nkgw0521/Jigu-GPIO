@@ -43,7 +43,7 @@ void MX_TIM2_Init(void);
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN Prototypes */
-
+void pwm_setup( uint32_t freq, uint32_t width, uint32_t polarity ) ;
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
