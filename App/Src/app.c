@@ -74,8 +74,7 @@ void app_main(void)
 	UART_Init( &huart2 ) ;
 	GPIO_LedWrite( GPIO_HIGH ) ;
 
-	pwm_setup( 60, 4, TIM_OCPOLARITY_HIGH ) ;
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	SCPI_PwmReset();
 
 	SCPI_Init(&scpi_context,
 			scpi_commands,

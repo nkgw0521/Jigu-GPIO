@@ -51,7 +51,7 @@ void pwm_setup( uint32_t freq, uint32_t width, uint32_t polarity )
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = (((width/10^6)*SystemCoreClock)+0.5) - 1;
+  sConfigOC.Pulse = (((width/1000000.0)*SystemCoreClock)+0.5) - 1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)

@@ -77,7 +77,9 @@ extern
 scpi_result_t
 SCPI_Flush(scpi_t * context);
 
-
+extern
+void
+SCPI_PwnReset( void ) ;
 
 
 #endif /*__SCPI_H__*/

@@ -54,7 +54,7 @@ enum_gpio_id_t
 gGPIO_PinId = PIN01 ;
 
 static
-scpi_pwm_param_t pwm_param ;
+scpi_pwm_param_t pwm_param = { 60, 4, TIM_OCPOLARITY_HIGH } ;
 
 
 const scpi_choice_def_t	tblGpioMode[] = {
@@ -287,6 +287,13 @@ My_CoreTstQ(scpi_t * context)
 	return SCPI_RES_OK;
 }
 
+void
+SCPI_PwmReset( Void )
+{
+	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+}
 
 static
 scpi_result_t
@@ -492,6 +499,7 @@ SCPI_PwmFrequency( scpi_t * context )
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
 		pwm_param.freq = param1.content.value ;
+		SCPI_PwmReset();
 	}
 	else
 	{
@@ -519,6 +527,7 @@ SCPI_PwmWidth( scpi_t * context )
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
 		pwm_param.width = param1.content.value ;
+		SCPI_PwmReset();
 	}
 	else
 	{
@@ -549,6 +558,7 @@ SCPI_PwmPolarity( scpi_t * context )
 	else
 	{
 		pwm_param.polarity = param1;
+		SCPI_PwmReset();
 	}
 	return result ;
 }
