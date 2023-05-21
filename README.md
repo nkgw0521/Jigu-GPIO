@@ -1,5 +1,9 @@
 # Jigu-GPIO
 
+## link archive
+
+https://github.com/j123b567/scpi-parser/releases/tag/v2.2
+
 ## SCPI Commands
 
 | Commands | Value | Description |
