@@ -1,5 +1,7 @@
 # Jigu-GPIO
 
+## SCPI Commands
+
 | Commands | Value | Description |
 |----------|-------|-------------|
 | SYSTem:LED | 0: Off / 1: On | - |
@@ -19,3 +21,12 @@
 | PWM:Width? | - | - |
 | PWM:POLarity | 0: - / 1: + | - |
 | PWM:POLarity? | - | - |
+
+## Haredware
+
+[NUCLEO-L432KC](https://os.mbed.com/platforms/ST-Nucleo-L432KC/)
+
+| Pin | Function |
+|-----|----------|
+| PA5(A4) | PWM Out |
+| PA6(A5) | GPIO1 |
