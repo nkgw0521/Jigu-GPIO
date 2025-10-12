@@ -19,12 +19,16 @@ https://github.com/j123b567/scpi-parser/releases/tag/v2.2
 | GPIO:PULl? | - | - |
 | GPIO:Speed | Low/Medium/High/Veryhigh | - |
 | GPIO:Speed? | - | - |
-| PWM:FREQuency | 0 - 4294967295 | - |
-| PWM:FREQuency? | - | - |
+| PWM:Frequency | 0 - 4294967295 | - |
+| PWM:Frequency? | - | - |
 | PWM:Width | 0 - 4294967295 | - |
 | PWM:Width? | - | - |
 | PWM:POLarity | 0: - / 1: + | - |
 | PWM:POLarity? | - | - |
+| PWM:STart | 0:Stop / 1:Start | - |
+| PWM:STart? | - | - |
+| PWM:Count | 0 - 4294967295 | - |
+| PWM:Count? | - | - |
 
 ## Haredware
 
@@ -34,3 +38,4 @@ https://github.com/j123b567/scpi-parser/releases/tag/v2.2
 |-----|----------|
 | PA5(A4) | PWM Out |
 | PA6(A5) | GPIO1 |
+| PA8(D9) | PWM In(Countor) |

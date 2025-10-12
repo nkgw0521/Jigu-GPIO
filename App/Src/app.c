@@ -84,11 +84,11 @@ void app_main(void)
 			scpi_input_buffer, SCPI_INPUT_BUFFER_LENGTH,
 			scpi_error_queue_data, SCPI_ERROR_QUEUE_SIZE);
 
-    while(1)
-    {
+	while(1)
+	{
 		if ( 0 < LineBugGet( ) )
 		{
 			SCPI_Input( &scpi_context, (char const *)gBufLine, strlen( (char *)gBufLine ) ) ;
 		}
-    }
+	}
 }

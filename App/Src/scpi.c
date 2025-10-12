@@ -27,6 +27,8 @@ struct _scpi_pwm_param_t {
 	uint32_t	freq;
 	uint32_t	width;
 	Bool		polarity;
+	Bool		start;
+	uint32_t	count;
 };
 typedef struct _scpi_pwm_param_t	scpi_pwm_param_t;
 
@@ -54,7 +56,7 @@ enum_gpio_id_t
 gGPIO_PinId = PIN01 ;
 
 static
-scpi_pwm_param_t pwm_param = { 60, 4, TIM_OCPOLARITY_HIGH } ;
+scpi_pwm_param_t pwm_param = { 1, 1, TIM_OCPOLARITY_HIGH, 0, 0 } ;
 
 
 const scpi_choice_def_t	tblGpioMode[] = {
@@ -163,6 +165,19 @@ static
 scpi_result_t
 SCPI_PwmPolarityQ( scpi_t * context ) ;
 
+static
+scpi_result_t
+SCPI_PwmStart( scpi_t * context );
+static
+scpi_result_t
+SCPI_PwmStartQ( scpi_t * context );
+static
+scpi_result_t
+SCPI_PwmCounter( scpi_t * context );
+static
+scpi_result_t
+SCPI_PwmCounterQ( scpi_t * context );
+
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(extern)						*/
 /************************************************************************/
@@ -208,15 +223,54 @@ const scpi_command_t scpi_commands[] = {
 	{ .pattern = "GPIO:Speed?", .callback = SCPI_GpioSpeedQ, },
 
 	/** PWM Command */
-	{ .pattern = "PWM:FREQuency", .callback = SCPI_PwmFrequency, },
-	{ .pattern = "PWM:FREQuency?", .callback = SCPI_PwmFrequencyQ, },
+	{ .pattern = "PWM:Frequency", .callback = SCPI_PwmFrequency, },
+	{ .pattern = "PWM:Frequency?", .callback = SCPI_PwmFrequencyQ, },
 	{ .pattern = "PWM:Width", .callback = SCPI_PwmWidth, },
 	{ .pattern = "PWM:Width?", .callback = SCPI_PwmWidthQ, },
 	{ .pattern = "PWM:POLarity"/* {0|1} */, .callback = SCPI_PwmPolarity, },
 	{ .pattern = "PWM:POLarity?", .callback = SCPI_PwmPolarityQ, },
+	{ .pattern = "PWM:STart", .callback = SCPI_PwmStart, },
+	{ .pattern = "PWM:STart?", .callback = SCPI_PwmStartQ, },
+	{ .pattern = "PWM:Counter", .callback = SCPI_PwmCounter },
+	{ .pattern = "PWM:Counter?", .callback = SCPI_PwmCounterQ, },
 	SCPI_CMD_LIST_END
 };
 
+
+volatile uint32_t overflow_count = 0;
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM1) {
+        overflow_count++;
+    }
+}
+
+void SetPulseCount(uint32_t cnt)
+{
+    __disable_irq();
+	__HAL_TIM_SET_COUNTER( &htim1, cnt ) ;
+    __enable_irq();
+}
+
+uint32_t GetPulseCount(void)
+{
+    uint32_t high, low;
+    __disable_irq();
+    high = overflow_count;
+    low = __HAL_TIM_GET_COUNTER(&htim1);
+    __enable_irq();
+
+    return (high << 16) | low;
+}
+
+void ResetPulseCount( void )
+{
+    __disable_irq();
+	overflow_count = 0 ;
+	__HAL_TIM_SET_COUNTER( &htim1, 0 ) ;
+    __enable_irq();
+}
 
 size_t
 SCPI_Write(scpi_t * context, const char * data, size_t len)
@@ -288,11 +342,14 @@ My_CoreTstQ(scpi_t * context)
 }
 
 void
-SCPI_PwmReset( Void )
+SCPI_PwmReset( void )
 {
 	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_Base_Stop_IT(&htim1);	/* カウンタ停止（外部パルスでカウント） */
+	//ResetPulseCount() ;
 	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_Base_Start_IT(&htim1);	/* カウンタ開始（外部パルスでカウント） */
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 }
 
 static
@@ -568,6 +625,74 @@ SCPI_PwmPolarityQ( scpi_t * context )
 {
 	scpi_result_t result = SCPI_RES_OK ;
 	SCPI_ResultBool(context,pwm_param.polarity);
+	return result ;
+}
+
+static
+scpi_result_t
+SCPI_PwmStart( scpi_t * context )
+{
+	scpi_result_t result = SCPI_RES_OK ;
+	scpi_bool_t	param1 ;
+	if ( !SCPI_ParamBool(context, &param1, TRUE) )
+	{
+		result =  SCPI_RES_ERR;
+	}
+	else
+	{
+		pwm_param.start = param1;
+		if ( pwm_param.start )
+		{
+			pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
+			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+			HAL_TIM_Base_Start_IT(&htim1);	/* カウンタ開始（外部パルスでカウント） */
+			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+		}
+		else
+		{
+			HAL_TIM_Base_Stop_IT(&htim1);	/* カウンタ停止（外部パルスでカウント） */
+			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+		}
+	}
+	return result ;
+}
+
+static
+scpi_result_t
+SCPI_PwmStartQ( scpi_t * context )
+{
+	scpi_result_t result = SCPI_RES_OK ;
+	SCPI_ResultBool(context,pwm_param.start);
+	return result ;
+}
+
+static
+scpi_result_t
+SCPI_PwmCounter( scpi_t * context )
+{
+	scpi_result_t result = SCPI_RES_OK ;
+	scpi_number_t param1;
+
+	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
+	{
+		pwm_param.count = param1.content.value ;
+		overflow_count = pwm_param.count >> 16 ;
+		SetPulseCount( pwm_param.count & 0x0000FFFF ) ;
+	}
+	else
+	{
+		result =  SCPI_RES_ERR;
+	}
+	return result ;
+}
+
+static
+scpi_result_t
+SCPI_PwmCounterQ( scpi_t * context )
+{
+	pwm_param.count = GetPulseCount() ;
+	scpi_result_t result = SCPI_RES_OK ;
+	SCPI_ResultUInt32Base( context, pwm_param.count, 10 ) ;
 	return result ;
 }
 
