@@ -18,7 +18,13 @@
 /************************************************************************/
 /* MACRO DEFINITION SECTION											    */
 /************************************************************************/
-#define	LOG_SCPI_PRINTF		
+#ifdef DEBUG
+#define LOG_SCPI_PRINTF(...) \
+    do { printf(__VA_ARGS__); } while(0)
+#else
+#define LOG_SCPI_PRINTF(...) \
+    do {} while(0)
+#endif
 
 /************************************************************************/
 /* TYPEDEF DEFINITION SECTION										    */
@@ -237,38 +243,27 @@ const scpi_command_t scpi_commands[] = {
 };
 
 
-volatile uint32_t overflow_count = 0;
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance == TIM1) {
-        overflow_count++;
-    }
-}
-
 void SetPulseCount(uint32_t cnt)
 {
     __disable_irq();
-	__HAL_TIM_SET_COUNTER( &htim1, cnt ) ;
+	__HAL_TIM_SET_COUNTER( &htim2, cnt ) ;
     __enable_irq();
 }
 
 uint32_t GetPulseCount(void)
 {
-    uint32_t high, low;
+    uint32_t val;
     __disable_irq();
-    high = overflow_count;
-    low = __HAL_TIM_GET_COUNTER(&htim1);
+    val = __HAL_TIM_GET_COUNTER(&htim2);
     __enable_irq();
 
-    return (high << 16) | low;
+    return val;
 }
 
 void ResetPulseCount( void )
 {
     __disable_irq();
-	overflow_count = 0 ;
-	__HAL_TIM_SET_COUNTER( &htim1, 0 ) ;
+	__HAL_TIM_SET_COUNTER( &htim2, 0 ) ;
     __enable_irq();
 }
 
@@ -344,12 +339,12 @@ My_CoreTstQ(scpi_t * context)
 void
 SCPI_PwmReset( void )
 {
-	HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_Base_Stop_IT(&htim1);	/* カウンタ停止（外部パルスでカウント） */
+	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
 	//ResetPulseCount() ;
 	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
-	//HAL_TIM_Base_Start_IT(&htim1);	/* カウンタ開始（外部パルスでカウント） */
-	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_Base_Start_IT(&htim2);	/* カウンタ開始（外部パルスでカウント） */
+	//HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 }
 
 static
@@ -644,14 +639,14 @@ SCPI_PwmStart( scpi_t * context )
 		if ( pwm_param.start )
 		{
 			pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
-			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-			HAL_TIM_Base_Start_IT(&htim1);	/* カウンタ開始（外部パルスでカウント） */
-			HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+			__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+			HAL_TIM_Base_Start_IT(&htim2);	/* カウンタ開始（外部パルスでカウント） */
+			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 		}
 		else
 		{
-			HAL_TIM_Base_Stop_IT(&htim1);	/* カウンタ停止（外部パルスでカウント） */
-			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+			HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 		}
 	}
 	return result ;
@@ -676,7 +671,6 @@ SCPI_PwmCounter( scpi_t * context )
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
 		pwm_param.count = param1.content.value ;
-		overflow_count = pwm_param.count >> 16 ;
 		SetPulseCount( pwm_param.count & 0x0000FFFF ) ;
 	}
 	else

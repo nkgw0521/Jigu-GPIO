@@ -36,6 +36,6 @@ https://github.com/j123b567/scpi-parser/releases/tag/v2.2
 
 | Pin | Function |
 |-----|----------|
-| PA5(A4) | PWM Out |
+| PA8(D9) | PWM Out |
 | PA6(A5) | GPIO1 |
-| PA8(D9) | PWM In(Countor) |
+| PA1(A1) | PWM In(Countor) |

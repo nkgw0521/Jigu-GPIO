@@ -74,6 +74,10 @@ scpi_result_t
 SCPI_Reset(scpi_t * context);
 
 extern
+void
+SCPI_PwmReset( void ) ;
+
+extern
 scpi_result_t
 SCPI_Flush(scpi_t * context);
 

@@ -1,0 +1,5 @@
+../App/Src/uart_lib.c:74:1:UART_Getc	2
+../App/Src/uart_lib.c:104:1:UART_Put	3
+../App/Src/uart_lib.c:127:1:UART_Puts	2
+../App/Src/uart_lib.c:152:1:UART_Putc	1
+../App/Src/uart_lib.c:175:1:UART_AssertionFailed	1

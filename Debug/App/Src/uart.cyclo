@@ -1,0 +1,9 @@
+../App/Src/uart.c:81:1:UART_Reset	1
+../App/Src/uart.c:139:1:UART_IsEmpty	1
+../App/Src/uart.c:159:1:HAL_UART_ErrorCallback	1
+../App/Src/uart.c:192:1:UART_Read	4
+../App/Src/uart.c:226:1:UART_Write	3
+../App/Src/uart.c:262:1:UART_Init	1
+../App/Src/uart.c:282:1:UART_Terminate	1
+../App/Src/uart.c:302:1:UART_SetBaudRate	9
+../App/Src/uart.c:344:1:UART_EmergencyPrint	3

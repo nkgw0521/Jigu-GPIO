@@ -1,0 +1,8 @@
+../App/Src/gpio.c:99:1:GPIO_Init	1
+../App/Src/gpio.c:148:1:GPIO_PinConfigSet	5
+../App/Src/gpio.c:183:1:GPIO_PinConfigModeGet	1
+../App/Src/gpio.c:203:1:GPIO_PinConfigPullGet	1
+../App/Src/gpio.c:223:1:GPIO_PinConfigSpeedGet	1
+../App/Src/gpio.c:244:1:GPIO_PinWrite	2
+../App/Src/gpio.c:270:1:GPIO_PinRead	2
+../App/Src/gpio.c:299:1:GPIO_LedWrite	1
