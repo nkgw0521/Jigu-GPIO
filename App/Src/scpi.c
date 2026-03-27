@@ -62,7 +62,7 @@ enum_gpio_id_t
 gGPIO_PinId = PIN01 ;
 
 static
-scpi_pwm_param_t pwm_param = { 1, 1, TIM_OCPOLARITY_HIGH, 0, 0 } ;
+scpi_pwm_param_t pwm_param = { 50, 1, TIM_OCPOLARITY_HIGH, 0, 0 } ;
 
 
 const scpi_choice_def_t	tblGpioMode[] = {
