@@ -68,6 +68,7 @@ static int LineBugGet( void )
  * @brief user main function
  * 
  */
+extern void pwm_service(void);
 void app_main(void)
 {
 	GPIO_Init( ) ;
@@ -90,5 +91,6 @@ void app_main(void)
 		{
 			SCPI_Input( &scpi_context, (char const *)gBufLine, strlen( (char *)gBufLine ) ) ;
 		}
+		pwm_service();
 	}
 }

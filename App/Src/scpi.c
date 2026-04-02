@@ -7,7 +7,7 @@
  */
 
 /************************************************************************/
-/* INCLUDE FILE SECTION												    */
+/* INCLUDE FILE SECTION													*/
 /************************************************************************/
 #include "system.h"
 #include "scpi/scpi.h"
@@ -16,18 +16,18 @@
 #include "uart_lib.h"
 
 /************************************************************************/
-/* MACRO DEFINITION SECTION											    */
+/* MACRO DEFINITION SECTION												*/
 /************************************************************************/
 #ifdef DEBUG
 #define LOG_SCPI_PRINTF(...) \
-    do { printf(__VA_ARGS__); } while(0)
+	do { printf(__VA_ARGS__); } while(0)
 #else
 #define LOG_SCPI_PRINTF(...) \
-    do {} while(0)
+	do {} while(0)
 #endif
 
 /************************************************************************/
-/* TYPEDEF DEFINITION SECTION										    */
+/* TYPEDEF DEFINITION SECTION											*/
 /************************************************************************/
 struct _scpi_pwm_param_t {
 	uint32_t	freq;
@@ -35,11 +35,12 @@ struct _scpi_pwm_param_t {
 	Bool		polarity;
 	Bool		start;
 	uint32_t	count;
+	uint32_t	numbers;	/* PWM:Numbers 用 */
 };
 typedef struct _scpi_pwm_param_t	scpi_pwm_param_t;
 
 /************************************************************************/
-/* GLOBAL DATA DEFINITION SECTION(PUBLIC)							    */
+/* GLOBAL DATA DEFINITION SECTION(PUBLIC)								*/
 /************************************************************************/
 scpi_interface_t scpi_interface = {
 	.error = SCPI_Error,
@@ -62,7 +63,7 @@ enum_gpio_id_t
 gGPIO_PinId = PIN01 ;
 
 static
-scpi_pwm_param_t pwm_param = { 50, 1, TIM_OCPOLARITY_HIGH, 0, 0 } ;
+scpi_pwm_param_t pwm_param = { 50, 1, 1, 0, 0, 0 } ;
 
 
 const scpi_choice_def_t	tblGpioMode[] = {
@@ -102,7 +103,9 @@ const scpi_choice_def_t tblPwmPolarity[] = {
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(PUBLIC)						*/
 /************************************************************************/
-/* nothing */
+extern void pwm_numbers_set(uint32_t numbers);
+extern void pwm_shot_count_reset(void);
+extern void pwm_run_state_set(bool running);
 
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(static)					   */
@@ -164,10 +167,10 @@ static
 scpi_result_t
 SCPI_PwmWidthQ( scpi_t * context ) ;
 
-static 
+static
 scpi_result_t
 SCPI_PwmPolarity( scpi_t * context ) ;
-static 
+static
 scpi_result_t
 SCPI_PwmPolarityQ( scpi_t * context ) ;
 
@@ -183,6 +186,13 @@ SCPI_PwmCounter( scpi_t * context );
 static
 scpi_result_t
 SCPI_PwmCounterQ( scpi_t * context );
+
+static
+scpi_result_t
+SCPI_PwmNumbers( scpi_t * context );
+static
+scpi_result_t
+SCPI_PwmNumbersQ( scpi_t * context );
 
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(extern)						*/
@@ -239,32 +249,34 @@ const scpi_command_t scpi_commands[] = {
 	{ .pattern = "PWM:STart?", .callback = SCPI_PwmStartQ, },
 	{ .pattern = "PWM:Counter", .callback = SCPI_PwmCounter },
 	{ .pattern = "PWM:Counter?", .callback = SCPI_PwmCounterQ, },
+	{ .pattern = "PWM:Numbers",  .callback = SCPI_PwmNumbers,  },
+	{ .pattern = "PWM:Numbers?", .callback = SCPI_PwmNumbersQ, },
 	SCPI_CMD_LIST_END
 };
 
 
 void SetPulseCount(uint32_t cnt)
 {
-    __disable_irq();
+	__disable_irq();
 	__HAL_TIM_SET_COUNTER( &htim2, cnt ) ;
-    __enable_irq();
+	__enable_irq();
 }
 
 uint32_t GetPulseCount(void)
 {
-    uint32_t val;
-    __disable_irq();
-    val = __HAL_TIM_GET_COUNTER(&htim2);
-    __enable_irq();
+	uint32_t val;
+	__disable_irq();
+	val = __HAL_TIM_GET_COUNTER(&htim2);
+	__enable_irq();
 
-    return val;
+	return val;
 }
 
 void ResetPulseCount( void )
 {
-    __disable_irq();
+	__disable_irq();
 	__HAL_TIM_SET_COUNTER( &htim2, 0 ) ;
-    __enable_irq();
+	__enable_irq();
 }
 
 size_t
@@ -319,6 +331,12 @@ SCPI_Reset(scpi_t * context)
 }
 
 
+void
+pwm_start_state_set(Bool start)
+{
+    pwm_param.start = start;
+}
+
 /**
  * Reimplement IEEE488.2 *TST?
  *
@@ -339,12 +357,10 @@ My_CoreTstQ(scpi_t * context)
 void
 SCPI_PwmReset( void )
 {
+	HAL_TIM_Base_Stop_IT(&htim1);
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
-	//ResetPulseCount() ;
 	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
-	//HAL_TIM_Base_Start_IT(&htim2);	/* カウンタ開始（外部パルスでカウント） */
-	//HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 }
 
 static
@@ -627,29 +643,45 @@ static
 scpi_result_t
 SCPI_PwmStart( scpi_t * context )
 {
-	scpi_result_t result = SCPI_RES_OK ;
-	scpi_bool_t	param1 ;
-	if ( !SCPI_ParamBool(context, &param1, TRUE) )
+	scpi_result_t result = SCPI_RES_OK;
+	scpi_bool_t param1;
+
+	if (!SCPI_ParamBool(context, &param1, TRUE))
 	{
-		result =  SCPI_RES_ERR;
+		result = SCPI_RES_ERR;
 	}
 	else
 	{
 		pwm_param.start = param1;
-		if ( pwm_param.start )
+
+		if (pwm_param.start)
 		{
-			pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
+			pwm_setup(pwm_param.freq, pwm_param.width, pwm_param.polarity);
+
+			//pwm_numbers_set( (1 < pwm_param.numbers) ? pwm_param.numbers - 1 : pwm_param.numbers );
+			pwm_numbers_set( pwm_param.numbers );
+			pwm_shot_count_reset();
+			pwm_run_state_set(true);
+
 			__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
 			HAL_TIM_Base_Start_IT(&htim2);	/* カウンタ開始（外部パルスでカウント） */
-			HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+
+			__HAL_TIM_SET_COUNTER(&htim1, 0);
+			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+			if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();
+			if (HAL_TIM_Base_Start_IT(&htim1) != HAL_OK) Error_Handler();
 		}
 		else
 		{
 			HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
+
+			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+			pwm_run_state_set(false);
 		}
 	}
-	return result ;
+
+	return result;
 }
 
 static
@@ -690,3 +722,32 @@ SCPI_PwmCounterQ( scpi_t * context )
 	return result ;
 }
 
+static
+scpi_result_t
+SCPI_PwmNumbers( scpi_t * context )
+{
+	scpi_result_t result = SCPI_RES_OK;
+	scpi_number_t param1;
+
+	if (SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE))
+	{
+		if (param1.content.value < 0) {
+			result = SCPI_RES_ERR;
+		} else {
+			pwm_param.numbers = (uint32_t)param1.content.value ;
+		}
+	}
+	else
+	{
+		result = SCPI_RES_ERR;
+	}
+	return result;
+}
+
+static
+scpi_result_t
+SCPI_PwmNumbersQ( scpi_t * context )
+{
+	SCPI_ResultUInt32Base(context, pwm_param.numbers, 10);
+	return SCPI_RES_OK;
+}
