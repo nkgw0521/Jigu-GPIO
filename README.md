@@ -4,6 +4,21 @@
 
 https://github.com/j123b567/scpi-parser/releases/tag/v2.2
 
+```bash
+# arm-none-eabi-gcc でクロスコンパイル
+make static \
+  CC=arm-none-eabi-gcc \
+  AR=arm-none-eabi-ar \
+  CFLAGS="-Wextra -Wmissing-prototypes -Wimplicit -Iinc \
+          -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard \
+          --specs=nano.specs -O0 -ffunction-sections -fdata-sections"
+```
+
+```
+cp ./scpi-parser/libscpi/dist/libscpi.a \
+   ./Jigu-GPIO/libscpi/dist/libscpi.a
+```
+
 ---
 
 ## SCPI Commands
