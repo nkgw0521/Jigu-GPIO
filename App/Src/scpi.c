@@ -247,7 +247,7 @@ const scpi_command_t scpi_commands[] = {
 	{ .pattern = "PWM:POLarity?", .callback = SCPI_PwmPolarityQ, },
 	{ .pattern = "PWM:STart", .callback = SCPI_PwmStart, },
 	{ .pattern = "PWM:STart?", .callback = SCPI_PwmStartQ, },
-	{ .pattern = "PWM:Counter", .callback = SCPI_PwmCounter },
+	{ .pattern = "PWM:Counter", .callback = SCPI_PwmCounter, },
 	{ .pattern = "PWM:Counter?", .callback = SCPI_PwmCounterQ, },
 	{ .pattern = "PWM:Numbers",  .callback = SCPI_PwmNumbers,  },
 	{ .pattern = "PWM:Numbers?", .callback = SCPI_PwmNumbersQ, },
