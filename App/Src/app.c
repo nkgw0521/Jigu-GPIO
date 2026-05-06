@@ -26,7 +26,7 @@ static unsigned char gBufLine[ BUF_LINE_MAX + 2 ] ;
  * 
  * @return int Receive buffer length.
  */
-static int LineBugGet( void )
+static int LineBufGet( void )
 {
 	char ch = '\0' ;
 	int nBufCount = 0 ;
@@ -34,28 +34,29 @@ static int LineBugGet( void )
 	for ( ; nBufCount < BUF_LINE_MAX ; )
 	{
 		ch = UART_Getc( );
-#if	defined(ECHO_BACK)
 		if ( (ch == '\r') || (ch == '\n') )
 		{
+#if	defined(ECHO_BACK)
 			UART_Puts( "\r\n" ) ;
+#endif	/* ECHO_BACK */
 			break ;
 		}
-		else if ( ch == '\b' )
-		{
-			UART_Puts( "\b \b" ) ;
-		}
-		else
-		{
-			UART_Putc( ch ) ;
-		}
-#endif	/* ECHO_BACK */
 		if ( ch == '\b' )
 		{
-			--nBufCount ;
+			if ( nBufCount > 0 )
+			{
+				--nBufCount ;
+#if	defined(ECHO_BACK)
+				UART_Puts( "\b \b" ) ;
+#endif	/* ECHO_BACK */
+			}
 		}
 		else
 		{
 			gBufLine[ nBufCount++ ] = (unsigned char)ch ;
+#if	defined(ECHO_BACK)
+			UART_Putc( ch ) ;
+#endif	/* ECHO_BACK */
 		}
 	}
 	gBufLine[ nBufCount++ ] = '\n' ;
@@ -87,7 +88,7 @@ void app_main(void)
 
 	while(1)
 	{
-		if ( 0 < LineBugGet( ) )
+		if ( 0 < LineBufGet( ) )
 		{
 			SCPI_Input( &scpi_context, (char const *)gBufLine, strlen( (char *)gBufLine ) ) ;
 		}
