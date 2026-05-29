@@ -1,5 +1,5 @@
 /**
- *	@file	   SCPI.c
+ *	@file		SCPI.c
  *	@brief	  SCPI Lib
  *	@author	 Yasuhisa Nakagawa
  *
@@ -96,7 +96,7 @@ const scpi_choice_def_t tblPwmPolarity[] = {
 
 
 /************************************************************************/
-/* GLOBAL DATA DEFINITION SECTION(extern)							   */
+/* GLOBAL DATA DEFINITION SECTION(extern)								*/
 /************************************************************************/
 /* nothing */
 
@@ -108,7 +108,7 @@ extern void pwm_shot_count_reset(void);
 extern void pwm_run_state_set(bool running);
 
 /************************************************************************/
-/* FUNCTION PROTOTYPE DEFINITION SECTION(static)					   */
+/* FUNCTION PROTOTYPE DEFINITION SECTION(static)						*/
 /************************************************************************/
 static
 scpi_result_t
@@ -334,7 +334,7 @@ SCPI_Reset(scpi_t * context)
 void
 pwm_start_state_set(Bool start)
 {
-    pwm_param.start = start;
+	 pwm_param.start = start;
 }
 
 /**
@@ -357,10 +357,14 @@ My_CoreTstQ(scpi_t * context)
 void
 SCPI_PwmReset( void )
 {
+	HAL_TIM_Base_Stop(&htim2);
+
 	HAL_TIM_Base_Stop_IT(&htim1);
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
+
+	pwm_run_state_set(false);
 	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
+	pwm_param.start = 0;
 }
 
 static
@@ -656,28 +660,47 @@ SCPI_PwmStart( scpi_t * context )
 
 		if (pwm_param.start)
 		{
+			/* Restart safely to avoid HAL_BUSY on repeated PWM:STart 1. */
+			HAL_TIM_Base_Stop(&htim2);
+
+			HAL_TIM_Base_Stop_IT(&htim1);
+			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+
 			pwm_setup(pwm_param.freq, pwm_param.width, pwm_param.polarity);
 
-			//pwm_numbers_set( (1 < pwm_param.numbers) ? pwm_param.numbers - 1 : pwm_param.numbers );
-			pwm_numbers_set( pwm_param.numbers );
+			pwm_numbers_set(pwm_param.numbers);
 			pwm_shot_count_reset();
 			pwm_run_state_set(true);
 
 			__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-			HAL_TIM_Base_Start_IT(&htim2);	/* カウンタ開始（外部パルスでカウント） */
+			if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
+			{
+				Error_Handler();
+			}
 
 			__HAL_TIM_SET_COUNTER(&htim1, 0);
 			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-			if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();
-			if (HAL_TIM_Base_Start_IT(&htim1) != HAL_OK) Error_Handler();
+			HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
+
+			if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
+			{
+				Error_Handler();
+			}
+
+			if (HAL_TIM_Base_Start_IT(&htim1) != HAL_OK)
+			{
+				Error_Handler();
+			}
 		}
 		else
 		{
-			HAL_TIM_Base_Stop_IT(&htim2);	/* カウンタ停止（外部パルスでカウント） */
+			HAL_TIM_Base_Stop(&htim2);
 
 			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+
 			pwm_run_state_set(false);
+			pwm_param.start = 0;
 		}
 	}
 

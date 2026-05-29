@@ -33,7 +33,18 @@ extern void pwm_start_state_set(bool start);
 
 void pwm_numbers_set(uint32_t numbers)
 {
-    g_pwm_numbers = numbers;
+    /*
+     * TIM1 update interrupt occurs at the end of a PWM period.
+     * Stopping at update event N therefore allows one already-started period
+     * to appear at the output.  Internally use N-1 for N >= 2.
+     * numbers == 0 remains continuous output.
+     * numbers == 1 is kept as-is and documented as a boundary case.
+     */
+    if (numbers > 1U) {
+        g_pwm_numbers = numbers - 1U;
+    } else {
+        g_pwm_numbers = numbers;
+    }
 }
 
 void pwm_shot_count_reset(void)
@@ -416,12 +427,9 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 /* USER CODE BEGIN 1 */
 void pwm_service(void)
 {
-    if (g_pwm_stop_pending)
-    {
-        HAL_TIM_Base_Stop_IT(&htim1);
-        HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-        g_pwm_stop_pending = false;
-    }
+    /* No background stop processing is required.
+     * PWM stop is completed inside HAL_TIM_PeriodElapsedCallback().
+     */
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -436,13 +444,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
         if ((g_pwm_numbers > 0U) && (g_pwm_shot_count >= g_pwm_numbers))
         {
-            //HAL_TIM_Base_Stop_IT(&htim1);
-            //HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-            //g_pwm_running = false;
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+            /* Complete the stop here.
+             * Do not defer through pwm_service(), because app_main() owns the main loop
+             * and the generated while(1) in main() is not reached.
+             */
+            HAL_TIM_Base_Stop_IT(&htim1);
+            HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+
             g_pwm_running = false;
-            g_pwm_stop_pending = true;
-            pwm_start_state_set(0);
+            g_pwm_stop_pending = false;
+            pwm_start_state_set(false);
         }
     }
 }
