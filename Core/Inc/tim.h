@@ -29,6 +29,7 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -47,6 +48,12 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN Prototypes */
 void pwm_setup( uint32_t freq, uint32_t width, uint32_t polarity ) ;
+void pwm_numbers_set(uint32_t numbers);
+void pwm_shot_count_reset(void);
+uint32_t pwm_shot_count_get(void);
+void pwm_run_state_set(bool running);
+bool pwm_is_running(void);
+void pwm_service(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

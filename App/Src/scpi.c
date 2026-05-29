@@ -358,11 +358,10 @@ void
 SCPI_PwmReset( void )
 {
 	HAL_TIM_Base_Stop(&htim2);
-
 	HAL_TIM_Base_Stop_IT(&htim1);
 	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-
 	pwm_run_state_set(false);
+
 	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
 	pwm_param.start = 0;
 }
@@ -631,7 +630,7 @@ SCPI_PwmPolarity( scpi_t * context )
 	{
 		pwm_param.polarity = param1;
 		SCPI_PwmReset();
-	}
+}
 	return result ;
 }
 static
@@ -660,11 +659,11 @@ SCPI_PwmStart( scpi_t * context )
 
 		if (pwm_param.start)
 		{
-			/* Restart safely to avoid HAL_BUSY on repeated PWM:STart 1. */
+			/* Ensure HAL timer states are clean before restarting. */
 			HAL_TIM_Base_Stop(&htim2);
-
 			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+			pwm_run_state_set(false);
 
 			pwm_setup(pwm_param.freq, pwm_param.width, pwm_param.polarity);
 
@@ -695,12 +694,9 @@ SCPI_PwmStart( scpi_t * context )
 		else
 		{
 			HAL_TIM_Base_Stop(&htim2);
-
 			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-
 			pwm_run_state_set(false);
-			pwm_param.start = 0;
 		}
 	}
 

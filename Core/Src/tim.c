@@ -27,6 +27,7 @@ static volatile uint32_t g_pwm_numbers = 0;
 static volatile uint32_t g_pwm_shot_count = 0;
 static volatile bool g_pwm_running = false;
 static volatile bool g_pwm_stop_pending = false;
+static volatile bool g_pwm_waiting_cc_stop = false;
 
 extern void pwm_start_state_set(bool start);
 
@@ -34,11 +35,13 @@ extern void pwm_start_state_set(bool start);
 void pwm_numbers_set(uint32_t numbers)
 {
     /*
-     * TIM1 update interrupt occurs at the end of a PWM period.
-     * Stopping at update event N therefore allows one already-started period
-     * to appear at the output.  Internally use N-1 for N >= 2.
-     * numbers == 0 remains continuous output.
-     * numbers == 1 is kept as-is and documented as a boundary case.
+     * Update IRQ occurs at the start of the next PWM period.
+     * To stop after N visible pulses without cutting the final width,
+     * arm the stop at update count N-1, then complete the stop at CC1
+     * of the final pulse.
+     *
+     * numbers == 0 : continuous output
+     * numbers == 1 : boundary case, kept as-is
      */
     if (numbers > 1U) {
         g_pwm_numbers = numbers - 1U;
@@ -50,6 +53,8 @@ void pwm_numbers_set(uint32_t numbers)
 void pwm_shot_count_reset(void)
 {
     g_pwm_shot_count = 0;
+    g_pwm_waiting_cc_stop = false;
+    g_pwm_stop_pending = false;
 }
 
 uint32_t pwm_shot_count_get(void)
@@ -60,6 +65,10 @@ uint32_t pwm_shot_count_get(void)
 void pwm_run_state_set(bool running)
 {
     g_pwm_running = running;
+    if (!running) {
+        g_pwm_waiting_cc_stop = false;
+        g_pwm_stop_pending = false;
+    }
 }
 
 bool pwm_is_running(void)
@@ -327,6 +336,8 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     /* TIM1 interrupt Init */
     HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+    HAL_NVIC_SetPriority(TIM1_CC_IRQn, 1, 1);
+    HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
   /* USER CODE END TIM1_MspInit 1 */
@@ -399,6 +410,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
     /* TIM1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+    HAL_NVIC_DisableIRQ(TIM1_CC_IRQn);
   /* USER CODE BEGIN TIM1_MspDeInit 1 */
 
   /* USER CODE END TIM1_MspDeInit 1 */
@@ -427,9 +439,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 /* USER CODE BEGIN 1 */
 void pwm_service(void)
 {
-    /* No background stop processing is required.
-     * PWM stop is completed inside HAL_TIM_PeriodElapsedCallback().
-     */
+    /* No background stop processing is required in the current design. */
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -440,21 +450,56 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             return;
         }
 
+        if (g_pwm_waiting_cc_stop) {
+            return;
+        }
+
         g_pwm_shot_count++;
 
         if ((g_pwm_numbers > 0U) && (g_pwm_shot_count >= g_pwm_numbers))
         {
-            /* Complete the stop here.
-             * Do not defer through pwm_service(), because app_main() owns the main loop
-             * and the generated while(1) in main() is not reached.
+            /*
+             * The final visible pulse has just started at this update event.
+             * Do not stop PWM here; stopping here cuts the final pulse width.
+             * Instead, disable further update counting and stop at CH1 compare,
+             * which is the end of the active pulse width in PWM mode 1.
              */
-            HAL_TIM_Base_Stop_IT(&htim1);
-            HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+            g_pwm_waiting_cc_stop = true;
+            g_pwm_stop_pending = true;
 
-            g_pwm_running = false;
-            g_pwm_stop_pending = false;
-            pwm_start_state_set(false);
+            __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
+            __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC1);
+            HAL_NVIC_ClearPendingIRQ(TIM1_CC_IRQn);
+            __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
         }
+    }
+}
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM1)
+    {
+        if (htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1) {
+            return;
+        }
+
+        if (!g_pwm_waiting_cc_stop) {
+            return;
+        }
+
+        __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_CC1);
+        HAL_TIM_Base_Stop_IT(&htim1);
+        HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+
+        __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+        __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC1);
+        HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
+        HAL_NVIC_ClearPendingIRQ(TIM1_CC_IRQn);
+
+        g_pwm_running = false;
+        g_pwm_waiting_cc_stop = false;
+        g_pwm_stop_pending = false;
+        pwm_start_state_set(false);
     }
 }
 /* USER CODE END 1 */
