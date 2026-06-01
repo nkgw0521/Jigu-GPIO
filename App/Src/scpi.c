@@ -14,6 +14,7 @@
 #include "scpi.h"
 #include "../../App/Inc/gpio.h"
 #include "uart_lib.h"
+#include "pwm_port.h"
 #include <stdio.h>
 
 /************************************************************************/
@@ -111,10 +112,6 @@ const scpi_choice_def_t tblPwmPolarity[] = {
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(PUBLIC)						*/
 /************************************************************************/
-extern void pwm_numbers_set(uint32_t numbers);
-extern void pwm_shot_count_reset(void);
-extern void pwm_run_state_set(bool running);
-
 extern volatile uint32_t g_dbg_cc_cnt;
 extern volatile uint32_t g_dbg_cc_enter_cnt;
 extern volatile uint32_t g_dbg_cc_enter_ccr;
@@ -280,26 +277,17 @@ const scpi_command_t scpi_commands[] = {
 
 void SetPulseCount(uint32_t cnt)
 {
-	__disable_irq();
-	__HAL_TIM_SET_COUNTER( &htim2, cnt ) ;
-	__enable_irq();
+	pwm_port_counter_set(cnt);
 }
 
 uint32_t GetPulseCount(void)
 {
-	uint32_t val;
-	__disable_irq();
-	val = __HAL_TIM_GET_COUNTER(&htim2);
-	__enable_irq();
-
-	return val;
+	return pwm_port_counter_get();
 }
 
 void ResetPulseCount( void )
 {
-	__disable_irq();
-	__HAL_TIM_SET_COUNTER( &htim2, 0 ) ;
-	__enable_irq();
+	pwm_port_counter_reset();
 }
 
 size_t
@@ -360,26 +348,6 @@ pwm_start_state_set(Bool start)
 	 pwm_param.start = start;
 }
 
-#if 0
-static
-void
-PWM_OutputInactiveLevelSet(void)
-{
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-
-	/* Preload ODR before switching PA8 to output mode to avoid a start-up glitch. */
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,
-		(pwm_param.polarity == 0) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-
-	GPIO_InitStruct.Pin = GPIO_PIN_8;
-	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	GPIO_InitStruct.Pull = GPIO_NOPULL;
-	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-}
-#endif
 
 /**
  * Reimplement IEEE488.2 *TST?
@@ -401,12 +369,7 @@ My_CoreTstQ(scpi_t * context)
 void
 SCPI_PwmReset( void )
 {
-	HAL_TIM_Base_Stop(&htim2);
-	HAL_TIM_Base_Stop_IT(&htim1);
-	HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-	pwm_run_state_set(false);
-
-	pwm_setup( pwm_param.freq, pwm_param.width, pwm_param.polarity ) ;
+	pwm_port_stop();
 	pwm_param.start = 0;
 }
 
@@ -703,48 +666,22 @@ SCPI_PwmStart( scpi_t * context )
 
 		if (pwm_param.start)
 		{
-			/* Ensure HAL timer states are clean before restarting. */
-			HAL_TIM_Base_Stop(&htim2);
-			HAL_TIM_Base_Stop_IT(&htim1);
-			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-			//__HAL_TIM_DISABLE(&htim1);
-			pwm_run_state_set(false);
-			//PWM_OutputInactiveLevelSet();
+			pwm_port_config_t cfg = {
+				.freq_hz = pwm_param.freq,
+				.width_us = pwm_param.width,
+				.polarity = pwm_param.polarity,
+				.numbers = pwm_param.numbers,
+			};
 
-			pwm_setup(pwm_param.freq, pwm_param.width, pwm_param.polarity);
-
-			pwm_numbers_set(pwm_param.numbers);
-			pwm_shot_count_reset();
-			pwm_run_state_set(true);
-
-			__HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-			if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
-			{
-				Error_Handler();
-			}
-
-			__HAL_TIM_SET_COUNTER(&htim1, 0);
-			//__HAL_TIM_ENABLE(&htim1);
-			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-			HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
-
-			if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK)
-			{
-				Error_Handler();
-			}
-
-			if (HAL_TIM_Base_Start_IT(&htim1) != HAL_OK)
+			if (pwm_port_start(&cfg) != HAL_OK)
 			{
 				Error_Handler();
 			}
 		}
 		else
 		{
-			HAL_TIM_Base_Stop(&htim2);
-			HAL_TIM_Base_Stop_IT(&htim1);
-			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-			pwm_run_state_set(false);
-			//PWM_OutputInactiveLevelSet();
+			pwm_port_stop();
+			pwm_param.start = 0;
 		}
 	}
 
