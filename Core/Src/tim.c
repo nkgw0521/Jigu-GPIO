@@ -189,13 +189,15 @@ void pwm_setup( uint32_t freq, uint32_t width, uint32_t polarity )
   sConfigOC.OCPolarity = (polarity == 0) ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCIdleState = (polarity == 0) ? TIM_OCIDLESTATE_SET : TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
+#if 0
   HAL_TIM_MspPostInit(&htim1);
+#endif
 }
 /* USER CODE END 0 */
 
@@ -334,9 +336,9 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_RCC_TIM1_CLK_ENABLE();
 
     /* TIM1 interrupt Init */
-    HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 1, 0);
+    HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    HAL_NVIC_SetPriority(TIM1_CC_IRQn, 1, 1);
+    HAL_NVIC_SetPriority(TIM1_CC_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
   /* USER CODE BEGIN TIM1_MspInit 1 */
 
@@ -362,7 +364,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* TIM2 interrupt Init */
-    HAL_NVIC_SetPriority(TIM2_IRQn, 2, 0);
+    HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
   /* USER CODE BEGIN TIM2_MspInit 1 */
 
@@ -490,6 +492,8 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
         __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_CC1);
         HAL_TIM_Base_Stop_IT(&htim1);
         HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+        //__HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
+        //__HAL_TIM_DISABLE(&htim1);
 
         __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
         __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC1);
