@@ -14,6 +14,7 @@
 #include "scpi.h"
 #include "../../App/Inc/gpio.h"
 #include "uart_lib.h"
+#include <stdio.h>
 
 /************************************************************************/
 /* MACRO DEFINITION SECTION												*/
@@ -25,6 +26,13 @@
 #define LOG_SCPI_PRINTF(...) \
 	do {} while(0)
 #endif
+/**
+#include <stdio.h>          // 追加
+#include "uart_lib.h"       // 追加
+	char dbg[64];
+	snprintf(dbg, sizeof(dbg), "g_debug_cc=%d\r\n", (int)g_debug_cc );
+	UART_Puts(dbg);
+*/
 
 /************************************************************************/
 /* TYPEDEF DEFINITION SECTION											*/
@@ -106,6 +114,16 @@ const scpi_choice_def_t tblPwmPolarity[] = {
 extern void pwm_numbers_set(uint32_t numbers);
 extern void pwm_shot_count_reset(void);
 extern void pwm_run_state_set(bool running);
+
+extern volatile uint32_t g_dbg_cc_cnt;
+extern volatile uint32_t g_dbg_cc_enter_cnt;
+extern volatile uint32_t g_dbg_cc_enter_ccr;
+extern volatile uint32_t g_dbg_cc_enter_arr;
+extern volatile uint32_t g_dbg_cc_enter_pa8;
+extern volatile uint32_t g_dbg_before_stop_cnt;
+extern volatile uint32_t g_dbg_before_stop_pa8;
+extern volatile uint32_t g_dbg_after_stop_cnt;
+extern volatile uint32_t g_dbg_after_stop_pa8;
 
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(static)						*/
@@ -194,6 +212,10 @@ static
 scpi_result_t
 SCPI_PwmNumbersQ( scpi_t * context );
 
+static
+scpi_result_t
+SCPI_PwmDebugQ( scpi_t * context );
+
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(extern)						*/
 /************************************************************************/
@@ -251,6 +273,7 @@ const scpi_command_t scpi_commands[] = {
 	{ .pattern = "PWM:Counter?", .callback = SCPI_PwmCounterQ, },
 	{ .pattern = "PWM:Numbers",  .callback = SCPI_PwmNumbers,  },
 	{ .pattern = "PWM:Numbers?", .callback = SCPI_PwmNumbersQ, },
+	{ .pattern = "PWM:DEBUG?", .callback = SCPI_PwmDebugQ, },
 	SCPI_CMD_LIST_END
 };
 
@@ -336,6 +359,27 @@ pwm_start_state_set(Bool start)
 {
 	 pwm_param.start = start;
 }
+
+#if 0
+static
+void
+PWM_OutputInactiveLevelSet(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+
+	/* Preload ODR before switching PA8 to output mode to avoid a start-up glitch. */
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,
+		(pwm_param.polarity == 0) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+	GPIO_InitStruct.Pin = GPIO_PIN_8;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
+#endif
 
 /**
  * Reimplement IEEE488.2 *TST?
@@ -663,7 +707,9 @@ SCPI_PwmStart( scpi_t * context )
 			HAL_TIM_Base_Stop(&htim2);
 			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+			//__HAL_TIM_DISABLE(&htim1);
 			pwm_run_state_set(false);
+			//PWM_OutputInactiveLevelSet();
 
 			pwm_setup(pwm_param.freq, pwm_param.width, pwm_param.polarity);
 
@@ -678,6 +724,7 @@ SCPI_PwmStart( scpi_t * context )
 			}
 
 			__HAL_TIM_SET_COUNTER(&htim1, 0);
+			//__HAL_TIM_ENABLE(&htim1);
 			__HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
 			HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
 
@@ -697,6 +744,7 @@ SCPI_PwmStart( scpi_t * context )
 			HAL_TIM_Base_Stop_IT(&htim1);
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
 			pwm_run_state_set(false);
+			//PWM_OutputInactiveLevelSet();
 		}
 	}
 
@@ -768,5 +816,38 @@ scpi_result_t
 SCPI_PwmNumbersQ( scpi_t * context )
 {
 	SCPI_ResultUInt32Base(context, pwm_param.numbers, 10);
+	return SCPI_RES_OK;
+}
+
+static
+scpi_result_t
+SCPI_PwmDebugQ( scpi_t * context )
+{
+	char result[192];
+	int len;
+
+	len = snprintf(
+		result,
+		sizeof(result),
+		"CC=%lu,CNT=%lu,CCR=%lu,ARR=%lu,PA8=%lu,BEF=%lu,BEFPA8=%lu,AFT=%lu,AFTPA8=%lu",
+		(uint32_t)g_dbg_cc_cnt,
+		(uint32_t)g_dbg_cc_enter_cnt,
+		(uint32_t)g_dbg_cc_enter_ccr,
+		(uint32_t)g_dbg_cc_enter_arr,
+		(uint32_t)g_dbg_cc_enter_pa8,
+		(uint32_t)g_dbg_before_stop_cnt,
+		(uint32_t)g_dbg_before_stop_pa8,
+		(uint32_t)g_dbg_after_stop_cnt,
+		(uint32_t)g_dbg_after_stop_pa8);
+
+	if (len < 0) {
+		return SCPI_RES_ERR;
+	}
+
+	if ((size_t)len >= sizeof(result)) {
+		len = (int)sizeof(result) - 1;
+	}
+
+	SCPI_ResultCharacters(context, result, (size_t)len);
 	return SCPI_RES_OK;
 }

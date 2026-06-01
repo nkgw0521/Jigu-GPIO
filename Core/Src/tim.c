@@ -29,6 +29,17 @@ static volatile bool g_pwm_running = false;
 static volatile bool g_pwm_stop_pending = false;
 static volatile bool g_pwm_waiting_cc_stop = false;
 
+/* Debug snapshot for PWM stop timing. Read by PWM:DEBUG?. */
+volatile uint32_t g_dbg_cc_cnt = 0;
+volatile uint32_t g_dbg_cc_enter_cnt = 0;
+volatile uint32_t g_dbg_cc_enter_ccr = 0;
+volatile uint32_t g_dbg_cc_enter_arr = 0;
+volatile uint32_t g_dbg_cc_enter_pa8 = 0;
+volatile uint32_t g_dbg_before_stop_cnt = 0;
+volatile uint32_t g_dbg_before_stop_pa8 = 0;
+volatile uint32_t g_dbg_after_stop_cnt = 0;
+volatile uint32_t g_dbg_after_stop_pa8 = 0;
+
 extern void pwm_start_state_set(bool start);
 
 
@@ -55,6 +66,16 @@ void pwm_shot_count_reset(void)
     g_pwm_shot_count = 0;
     g_pwm_waiting_cc_stop = false;
     g_pwm_stop_pending = false;
+
+    g_dbg_cc_cnt = 0;
+    g_dbg_cc_enter_cnt = 0;
+    g_dbg_cc_enter_ccr = 0;
+    g_dbg_cc_enter_arr = 0;
+    g_dbg_cc_enter_pa8 = 0;
+    g_dbg_before_stop_cnt = 0;
+    g_dbg_before_stop_pa8 = 0;
+    g_dbg_after_stop_cnt = 0;
+    g_dbg_after_stop_pa8 = 0;
 }
 
 uint32_t pwm_shot_count_get(void)
@@ -252,14 +273,14 @@ void MX_TIM1_Init(void)
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_SET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_ENABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
   sBreakDeadTimeConfig.DeadTime = 0;
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
@@ -489,11 +510,22 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
             return;
         }
 
+        g_dbg_cc_cnt++;
+        g_dbg_cc_enter_cnt = TIM1->CNT;
+        g_dbg_cc_enter_ccr = TIM1->CCR1;
+        g_dbg_cc_enter_arr = TIM1->ARR;
+        g_dbg_cc_enter_pa8 = (GPIOA->IDR & GPIO_PIN_8) ? 1U : 0U;
+
         __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_CC1);
+
+        g_dbg_before_stop_cnt = TIM1->CNT;
+        g_dbg_before_stop_pa8 = (GPIOA->IDR & GPIO_PIN_8) ? 1U : 0U;
+
         HAL_TIM_Base_Stop_IT(&htim1);
         HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-        //__HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
-        //__HAL_TIM_DISABLE(&htim1);
+
+        g_dbg_after_stop_cnt = TIM1->CNT;
+        g_dbg_after_stop_pa8 = (GPIOA->IDR & GPIO_PIN_8) ? 1U : 0U;
 
         __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
         __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC1);
