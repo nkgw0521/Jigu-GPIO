@@ -5,44 +5,41 @@
 
 #include "pwm_port.h"
 #include "pwm_generator.h"
-#include "tim.h"
+#include "board_config.h"
 
 /*
- * STM32L432KC Nucleo port implementation.
+ * Common STM32 HAL PWM port implementation.
  *
- * PWM output : TIM1_CH1 on PA8
- * Pulse count: TIM2 external clock on PA1/TIM2_CH2
- *
- * Board migration should be done by replacing or conditionalizing only this
- * port layer and the CubeMX timer/GPIO configuration. Generator and SCPI code
- * must not directly access htim1/htim2, TIM registers, GPIO registers or IRQ names.
+ * Board-specific handle/channel/IRQ/pin differences are kept in board_config.h.
+ * Generator and SCPI code must not directly access TIM/GPIO/HAL details.
  */
 
-static uint32_t tim1_get_clk_hz(void)
+static uint32_t pwm_port_get_timer_clk_hz(void)
 {
-    uint32_t pclk2 = HAL_RCC_GetPCLK2Freq();
+    uint32_t pclk = PWM_TIMER_PCLK_FREQ();
 
     RCC_ClkInitTypeDef clkconfig;
     uint32_t flash_latency = 0;
     HAL_RCC_GetClockConfig(&clkconfig, &flash_latency);
 
-    if (clkconfig.APB2CLKDivider == RCC_HCLK_DIV1) {
-        return pclk2;
+    if (clkconfig.PWM_TIMER_APB_DIVIDER_FIELD == RCC_HCLK_DIV1) {
+        return pclk;
     } else {
-        return pclk2 * 2U;
+        return pclk * 2U;
     }
 }
 
-static bool tim1_find_best_freq(uint32_t target_freq_hz,
-                                uint16_t *out_psc,
-                                uint16_t *out_arr,
-                                uint32_t *out_actual_freq_hz)
+static bool pwm_port_find_best_freq(uint32_t target_freq_hz,
+                                    uint16_t *out_psc,
+                                    uint16_t *out_arr,
+                                    uint32_t *out_actual_freq_hz)
 {
-    if ((target_freq_hz == 0U) || (out_psc == NULL) || (out_arr == NULL) || (out_actual_freq_hz == NULL)) {
+    if ((target_freq_hz == 0U) || (out_psc == NULL) ||
+        (out_arr == NULL) || (out_actual_freq_hz == NULL)) {
         return false;
     }
 
-    uint32_t tim_clk = tim1_get_clk_hz();
+    uint32_t tim_clk = pwm_port_get_timer_clk_hz();
     uint64_t best_err = UINT64_MAX;
     bool found = false;
 
@@ -93,7 +90,7 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     uint16_t arr = 0;
     uint32_t actual_freq_hz = 0;
 
-    if (!tim1_find_best_freq(freq_hz, &psc, &arr, &actual_freq_hz)) {
+    if (!pwm_port_find_best_freq(freq_hz, &psc, &arr, &actual_freq_hz)) {
         return false;
     }
 
@@ -110,9 +107,9 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
 
     uint16_t ccr = (uint16_t)ccr64;
 
-    htim1.Init.Prescaler = psc;
-    htim1.Init.Period = arr;
-    if (HAL_TIM_PWM_Init(&htim1) != HAL_OK) {
+    PWM_TIMER_HANDLE.Init.Prescaler = psc;
+    PWM_TIMER_HANDLE.Init.Period = arr;
+    if (HAL_TIM_PWM_Init(&PWM_TIMER_HANDLE) != HAL_OK) {
         return false;
     }
 
@@ -124,7 +121,7 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     sConfigOC.OCIdleState = (polarity == 0U) ? TIM_OCIDLESTATE_SET : TIM_OCIDLESTATE_RESET;
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
-    if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK) {
+    if (HAL_TIM_PWM_ConfigChannel(&PWM_TIMER_HANDLE, &sConfigOC, PWM_CHANNEL) != HAL_OK) {
         return false;
     }
 
@@ -135,25 +132,25 @@ bool pwm_port_start_output(void)
 {
     HAL_StatusTypeDef status;
 
-    __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
-    status = HAL_TIM_Base_Start(&htim2);
+    __HAL_TIM_CLEAR_FLAG(&PWM_COUNTER_HANDLE, TIM_FLAG_UPDATE);
+    status = HAL_TIM_Base_Start(&PWM_COUNTER_HANDLE);
     if (status != HAL_OK) {
         return false;
     }
 
-    __HAL_TIM_SET_COUNTER(&htim1, 0);
-    __HAL_TIM_ENABLE(&htim1);
-    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-    HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
+    __HAL_TIM_SET_COUNTER(&PWM_TIMER_HANDLE, 0);
+    __HAL_TIM_ENABLE(&PWM_TIMER_HANDLE);
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG);
+    HAL_NVIC_ClearPendingIRQ(PWM_UPDATE_IRQn);
 
-    status = HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+    status = HAL_TIM_PWM_Start(&PWM_TIMER_HANDLE, PWM_CHANNEL);
     if (status != HAL_OK) {
         return false;
     }
 
-    status = HAL_TIM_Base_Start_IT(&htim1);
+    status = HAL_TIM_Base_Start_IT(&PWM_TIMER_HANDLE);
     if (status != HAL_OK) {
-        HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+        HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
         return false;
     }
 
@@ -162,51 +159,51 @@ bool pwm_port_start_output(void)
 
 void pwm_port_stop_all(void)
 {
-    HAL_TIM_Base_Stop(&htim2);
-    HAL_TIM_Base_Stop_IT(&htim1);
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
-    __HAL_TIM_DISABLE(&htim1);
+    HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
+    HAL_TIM_Base_Stop_IT(&PWM_TIMER_HANDLE);
+    HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
+    __HAL_TIM_DISABLE(&PWM_TIMER_HANDLE);
 }
 
 void pwm_port_stop_output_from_isr(void)
 {
-    HAL_TIM_Base_Stop_IT(&htim1);
-    HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
+    HAL_TIM_Base_Stop_IT(&PWM_TIMER_HANDLE);
+    HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
 }
 
 void pwm_port_disable_update_irq(void)
 {
-    __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_UPDATE);
+    __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
 }
 
 void pwm_port_enable_compare_irq(void)
 {
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_CC1);
+    __HAL_TIM_ENABLE_IT(&PWM_TIMER_HANDLE, PWM_COMPARE_IT);
 }
 
 void pwm_port_disable_compare_irq(void)
 {
-    __HAL_TIM_DISABLE_IT(&htim1, TIM_IT_CC1);
+    __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_COMPARE_IT);
 }
 
 void pwm_port_clear_update_flag(void)
 {
-    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG);
 }
 
 void pwm_port_clear_compare_flag(void)
 {
-    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_CC1);
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_COMPARE_FLAG);
 }
 
 void pwm_port_clear_update_pending_irq(void)
 {
-    HAL_NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
+    HAL_NVIC_ClearPendingIRQ(PWM_UPDATE_IRQn);
 }
 
 void pwm_port_clear_compare_pending_irq(void)
 {
-    HAL_NVIC_ClearPendingIRQ(TIM1_CC_IRQn);
+    HAL_NVIC_ClearPendingIRQ(PWM_CC_IRQn);
 }
 
 void pwm_port_capture_snapshot(pwm_port_snapshot_t *snapshot)
@@ -215,16 +212,16 @@ void pwm_port_capture_snapshot(pwm_port_snapshot_t *snapshot)
         return;
     }
 
-    snapshot->cnt = TIM1->CNT;
-    snapshot->ccr = TIM1->CCR1;
-    snapshot->arr = TIM1->ARR;
-    snapshot->output_level = (GPIOA->IDR & GPIO_PIN_8) ? 1U : 0U;
+    snapshot->cnt = PWM_TIMER_CNT_VALUE();
+    snapshot->ccr = PWM_TIMER_CCR_VALUE();
+    snapshot->arr = PWM_TIMER_ARR_VALUE();
+    snapshot->output_level = (PWM_OUTPUT_GPIO_PORT->IDR & PWM_OUTPUT_GPIO_PIN) ? 1U : 0U;
 }
 
 void pwm_port_counter_set(uint32_t value)
 {
     __disable_irq();
-    __HAL_TIM_SET_COUNTER(&htim2, value);
+    __HAL_TIM_SET_COUNTER(&PWM_COUNTER_HANDLE, value);
     __enable_irq();
 }
 
@@ -233,7 +230,7 @@ uint32_t pwm_port_counter_get(void)
     uint32_t value;
 
     __disable_irq();
-    value = __HAL_TIM_GET_COUNTER(&htim2);
+    value = __HAL_TIM_GET_COUNTER(&PWM_COUNTER_HANDLE);
     __enable_irq();
 
     return value;
@@ -246,18 +243,18 @@ void pwm_port_counter_reset(void)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == TIM1) {
+    if (htim->Instance == PWM_TIMER_HANDLE.Instance) {
         pwm_generator_on_period_elapsed();
     }
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance != TIM1) {
+    if (htim->Instance != PWM_TIMER_HANDLE.Instance) {
         return;
     }
 
-    if (htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1) {
+    if (htim->Channel != PWM_ACTIVE_CHANNEL) {
         return;
     }
 
