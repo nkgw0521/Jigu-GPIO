@@ -14,7 +14,7 @@
 #include "scpi.h"
 #include "../../App/Inc/gpio.h"
 #include "uart_lib.h"
-#include "pwm_port.h"
+#include "pwm_generator.h"
 #include <stdio.h>
 
 /************************************************************************/
@@ -112,15 +112,6 @@ const scpi_choice_def_t tblPwmPolarity[] = {
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(PUBLIC)						*/
 /************************************************************************/
-extern volatile uint32_t g_dbg_cc_cnt;
-extern volatile uint32_t g_dbg_cc_enter_cnt;
-extern volatile uint32_t g_dbg_cc_enter_ccr;
-extern volatile uint32_t g_dbg_cc_enter_arr;
-extern volatile uint32_t g_dbg_cc_enter_pa8;
-extern volatile uint32_t g_dbg_before_stop_cnt;
-extern volatile uint32_t g_dbg_before_stop_pa8;
-extern volatile uint32_t g_dbg_after_stop_cnt;
-extern volatile uint32_t g_dbg_after_stop_pa8;
 
 /************************************************************************/
 /* FUNCTION PROTOTYPE DEFINITION SECTION(static)						*/
@@ -277,17 +268,17 @@ const scpi_command_t scpi_commands[] = {
 
 void SetPulseCount(uint32_t cnt)
 {
-	pwm_port_counter_set(cnt);
+	pwm_generator_counter_set(cnt);
 }
 
 uint32_t GetPulseCount(void)
 {
-	return pwm_port_counter_get();
+	return pwm_generator_counter_get();
 }
 
 void ResetPulseCount( void )
 {
-	pwm_port_counter_reset();
+	pwm_generator_counter_reset();
 }
 
 size_t
@@ -369,7 +360,7 @@ My_CoreTstQ(scpi_t * context)
 void
 SCPI_PwmReset( void )
 {
-	pwm_port_stop();
+	pwm_generator_stop();
 	pwm_param.start = 0;
 }
 
@@ -666,21 +657,21 @@ SCPI_PwmStart( scpi_t * context )
 
 		if (pwm_param.start)
 		{
-			pwm_port_config_t cfg = {
+			pwm_generator_config_t cfg = {
 				.freq_hz = pwm_param.freq,
 				.width_us = pwm_param.width,
 				.polarity = pwm_param.polarity,
 				.numbers = pwm_param.numbers,
 			};
 
-			if (pwm_port_start(&cfg) != HAL_OK)
+			if (!pwm_generator_start(&cfg))
 			{
 				Error_Handler();
 			}
 		}
 		else
 		{
-			pwm_port_stop();
+			pwm_generator_stop();
 			pwm_param.start = 0;
 		}
 	}
@@ -762,20 +753,23 @@ SCPI_PwmDebugQ( scpi_t * context )
 {
 	char result[192];
 	int len;
+	pwm_generator_debug_t debug;
+
+	pwm_generator_get_debug_snapshot(&debug);
 
 	len = snprintf(
 		result,
 		sizeof(result),
 		"CC=%lu,CNT=%lu,CCR=%lu,ARR=%lu,PA8=%lu,BEF=%lu,BEFPA8=%lu,AFT=%lu,AFTPA8=%lu",
-		(uint32_t)g_dbg_cc_cnt,
-		(uint32_t)g_dbg_cc_enter_cnt,
-		(uint32_t)g_dbg_cc_enter_ccr,
-		(uint32_t)g_dbg_cc_enter_arr,
-		(uint32_t)g_dbg_cc_enter_pa8,
-		(uint32_t)g_dbg_before_stop_cnt,
-		(uint32_t)g_dbg_before_stop_pa8,
-		(uint32_t)g_dbg_after_stop_cnt,
-		(uint32_t)g_dbg_after_stop_pa8);
+		(uint32_t)debug.cc_count,
+		(uint32_t)debug.cc_enter_cnt,
+		(uint32_t)debug.cc_enter_ccr,
+		(uint32_t)debug.cc_enter_arr,
+		(uint32_t)debug.cc_enter_pa8,
+		(uint32_t)debug.before_stop_cnt,
+		(uint32_t)debug.before_stop_pa8,
+		(uint32_t)debug.after_stop_cnt,
+		(uint32_t)debug.after_stop_pa8);
 
 	if (len < 0) {
 		return SCPI_RES_ERR;
