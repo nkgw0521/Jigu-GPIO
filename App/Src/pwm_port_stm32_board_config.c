@@ -116,10 +116,24 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     sConfigOC.OCMode = TIM_OCMODE_PWM1;
     sConfigOC.Pulse = ccr;
     sConfigOC.OCPolarity = (polarity == 0U) ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
     sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+
+    /*
+     * Advanced-control timers such as TIM1 on STM32L432 have complementary
+     * output and idle-state fields. General-purpose timers such as TIM21 on
+     * STM32L053 do not define these members in TIM_OC_InitTypeDef.
+     */
+#if defined(TIM_OCNPOLARITY_HIGH)
+    sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+#endif
+
+#if defined(TIM_OCIDLESTATE_SET) && defined(TIM_OCIDLESTATE_RESET)
     sConfigOC.OCIdleState = (polarity == 0U) ? TIM_OCIDLESTATE_SET : TIM_OCIDLESTATE_RESET;
+#endif
+
+#if defined(TIM_OCNIDLESTATE_RESET)
     sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+#endif
 
     if (HAL_TIM_PWM_ConfigChannel(&PWM_TIMER_HANDLE, &sConfigOC, PWM_CHANNEL) != HAL_OK) {
         return false;
