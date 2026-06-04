@@ -33,12 +33,12 @@
 		<link>
 			<name>App</name>
 			<type>2</type>
-			<location>X:/Tools/Jigu-GPIO2/App</location>
+			<locationURI>WORKSPACE_LOC/App</locationURI>
 		</link>
 		<link>
 			<name>libscpi</name>
 			<type>2</type>
-			<location>X:/Tools/Jigu-GPIO2/libscpi</location>
+			<locationURI>WORKSPACE_LOC/libscpi</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>
