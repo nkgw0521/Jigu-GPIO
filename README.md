@@ -108,6 +108,8 @@ Hi -> Lo -> Hi -> Lo -> Hi -> Lo -> Hi
 
 The final High level is part of the normal PWM waveform and is not considered a glitch.
 
+Note: On STM32L053R8/TIM21, advanced timer idle-state control is not available, so Active Low stop waveform may differ from STM32L432KC/TIM1.
+
 ### Pulse Count Control (PWM:Numbers)
 
 - `PWM:Numbers = 0`
@@ -190,6 +192,38 @@ libscpi/Src/syscalls.c
 libscpi/Src/sysmem.c
 ```
 
+---
+
+## STM32CubeMX Regeneration
+
+When STM32CubeMX regenerates code, linked folders such as `App` and `libscpi` may be removed from the STM32CubeIDE project.
+
+### Recovery Procedure
+
+1. Regenerate code using STM32CubeMX.
+2. Drag and drop the following folders from Windows Explorer into the STM32CubeIDE Project Explorer:
+
+   * `App`
+   * `libscpi`
+3. Select:
+
+```text
+Link to files and folders
+```
+
+4. Restore build participation for newly added files and folders if necessary:
+
+   * Right click the file or folder
+   * Resource Configurations
+   * Exclude from Build...
+   * Clear the checkboxes for Debug and Release
+
+5. Run:
+
+```text
+Project -> Clean...
+Build Project
+```
 
 ---
 
