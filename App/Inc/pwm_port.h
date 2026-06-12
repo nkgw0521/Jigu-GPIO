@@ -13,6 +13,13 @@ typedef struct {
     uint32_t ccr;
     uint32_t arr;
     uint32_t output_level;
+
+    /* External pulse counter timer debug registers. */
+    uint32_t counter_smcr;
+    uint32_t counter_ccmr1;
+    uint32_t counter_ccer;
+    uint32_t counter_cr1;
+    uint32_t counter_cnt;
 } pwm_port_snapshot_t;
 
 bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t polarity);

@@ -73,6 +73,27 @@ static bool pwm_port_find_best_freq(uint32_t target_freq_hz,
     return found;
 }
 
+static void pwm_port_configure_counter_completion_edge(uint32_t polarity)
+{
+    /*
+     * TIM2 is configured by CubeMX as:
+     *   External Clock Mode 1
+     *   Trigger Source = TI2FP2
+     *
+     * Only the TI2 polarity is changed here so PWM:Count? reports
+     * completed active pulses:
+     *   pol=0 Active Low  -> rising edge  = Low pulse completion
+     *   pol=1 Active High -> falling edge = High pulse completion
+     */
+    /* CC2S = 01: IC2 mapped on TI2 */
+    MODIFY_REG(PWM_COUNTER_HANDLE.Instance->CCMR1, TIM_CCMR1_CC2S, TIM_CCMR1_CC2S_0);
+    CLEAR_BIT(PWM_COUNTER_HANDLE.Instance->CCER, TIM_CCER_CC2P | TIM_CCER_CC2NP);
+    SET_BIT(PWM_COUNTER_HANDLE.Instance->CCER, TIM_CCER_CC2E);
+    if (polarity != 0U) {
+        SET_BIT(PWM_COUNTER_HANDLE.Instance->CCER, TIM_CCER_CC2P);
+    }
+}
+
 bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t polarity)
 {
     TIM_OC_InitTypeDef sConfigOC = {0};
@@ -138,6 +159,8 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     if (HAL_TIM_PWM_ConfigChannel(&PWM_TIMER_HANDLE, &sConfigOC, PWM_CHANNEL) != HAL_OK) {
         return false;
     }
+
+    pwm_port_configure_counter_completion_edge(polarity);
 
     return true;
 }
@@ -230,6 +253,12 @@ void pwm_port_capture_snapshot(pwm_port_snapshot_t *snapshot)
     snapshot->ccr = PWM_TIMER_CCR_VALUE();
     snapshot->arr = PWM_TIMER_ARR_VALUE();
     snapshot->output_level = (PWM_OUTPUT_GPIO_PORT->IDR & PWM_OUTPUT_GPIO_PIN) ? 1U : 0U;
+
+    snapshot->counter_smcr = PWM_COUNTER_HANDLE.Instance->SMCR;
+    snapshot->counter_ccmr1 = PWM_COUNTER_HANDLE.Instance->CCMR1;
+    snapshot->counter_ccer = PWM_COUNTER_HANDLE.Instance->CCER;
+    snapshot->counter_cr1 = PWM_COUNTER_HANDLE.Instance->CR1;
+    snapshot->counter_cnt = PWM_COUNTER_HANDLE.Instance->CNT;
 }
 
 void pwm_port_counter_set(uint32_t value)

@@ -25,6 +25,13 @@ typedef struct {
     uint32_t before_stop_pa8;
     uint32_t after_stop_cnt;
     uint32_t after_stop_pa8;
+
+    /* External pulse counter timer debug registers. */
+    uint32_t counter_smcr;
+    uint32_t counter_ccmr1;
+    uint32_t counter_ccer;
+    uint32_t counter_cr1;
+    uint32_t counter_cnt;
 } pwm_generator_debug_t;
 
 bool pwm_generator_start(const pwm_generator_config_t *cfg);

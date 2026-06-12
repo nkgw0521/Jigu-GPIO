@@ -751,7 +751,7 @@ static
 scpi_result_t
 SCPI_PwmDebugQ( scpi_t * context )
 {
-	char result[192];
+	char result[320];
 	int len;
 	pwm_generator_debug_t debug;
 
@@ -760,7 +760,8 @@ SCPI_PwmDebugQ( scpi_t * context )
 	len = snprintf(
 		result,
 		sizeof(result),
-		"CC=%lu,CNT=%lu,CCR=%lu,ARR=%lu,PA8=%lu,BEF=%lu,BEFPA8=%lu,AFT=%lu,AFTPA8=%lu",
+		"CC=%lu,CNT=%lu,CCR=%lu,ARR=%lu,PA8=%lu,BEF=%lu,BEFPA8=%lu,AFT=%lu,AFTPA8=%lu,"
+		"T2SMCR=%08lX,T2CCMR1=%08lX,T2CCER=%08lX,T2CR1=%08lX,T2CNT=%lu",
 		(uint32_t)debug.cc_count,
 		(uint32_t)debug.cc_enter_cnt,
 		(uint32_t)debug.cc_enter_ccr,
@@ -769,7 +770,12 @@ SCPI_PwmDebugQ( scpi_t * context )
 		(uint32_t)debug.before_stop_cnt,
 		(uint32_t)debug.before_stop_pa8,
 		(uint32_t)debug.after_stop_cnt,
-		(uint32_t)debug.after_stop_pa8);
+		(uint32_t)debug.after_stop_pa8,
+		(uint32_t)debug.counter_smcr,
+		(uint32_t)debug.counter_ccmr1,
+		(uint32_t)debug.counter_ccer,
+		(uint32_t)debug.counter_cr1,
+		(uint32_t)debug.counter_cnt);
 
 	if (len < 0) {
 		return SCPI_RES_ERR;

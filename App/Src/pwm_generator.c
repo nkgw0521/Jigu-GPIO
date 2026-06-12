@@ -21,6 +21,11 @@ static volatile uint32_t g_dbg_before_stop_cnt = 0;
 static volatile uint32_t g_dbg_before_stop_pa8 = 0;
 static volatile uint32_t g_dbg_after_stop_cnt = 0;
 static volatile uint32_t g_dbg_after_stop_pa8 = 0;
+static volatile uint32_t g_dbg_counter_smcr = 0;
+static volatile uint32_t g_dbg_counter_ccmr1 = 0;
+static volatile uint32_t g_dbg_counter_ccer = 0;
+static volatile uint32_t g_dbg_counter_cr1 = 0;
+static volatile uint32_t g_dbg_counter_cnt = 0;
 
 extern void pwm_start_state_set(bool start);
 
@@ -35,6 +40,11 @@ static void pwm_debug_reset(void)
     g_dbg_before_stop_pa8 = 0;
     g_dbg_after_stop_cnt = 0;
     g_dbg_after_stop_pa8 = 0;
+    g_dbg_counter_smcr = 0;
+    g_dbg_counter_ccmr1 = 0;
+    g_dbg_counter_ccer = 0;
+    g_dbg_counter_cr1 = 0;
+    g_dbg_counter_cnt = 0;
 }
 
 void pwm_generator_set_numbers(uint32_t numbers)
@@ -183,6 +193,11 @@ void pwm_generator_on_compare_match(void)
     pwm_port_capture_snapshot(&snapshot);
     g_dbg_after_stop_cnt = snapshot.cnt;
     g_dbg_after_stop_pa8 = snapshot.output_level;
+    g_dbg_counter_smcr = snapshot.counter_smcr;
+    g_dbg_counter_ccmr1 = snapshot.counter_ccmr1;
+    g_dbg_counter_ccer = snapshot.counter_ccer;
+    g_dbg_counter_cr1 = snapshot.counter_cr1;
+    g_dbg_counter_cnt = snapshot.counter_cnt;
 
     pwm_port_clear_update_flag();
     pwm_port_clear_compare_flag();
@@ -225,4 +240,9 @@ void pwm_generator_get_debug_snapshot(pwm_generator_debug_t *debug)
     debug->before_stop_pa8 = g_dbg_before_stop_pa8;
     debug->after_stop_cnt = g_dbg_after_stop_cnt;
     debug->after_stop_pa8 = g_dbg_after_stop_pa8;
+    debug->counter_smcr = g_dbg_counter_smcr;
+    debug->counter_ccmr1 = g_dbg_counter_ccmr1;
+    debug->counter_ccer = g_dbg_counter_ccer;
+    debug->counter_cr1 = g_dbg_counter_cr1;
+    debug->counter_cnt = g_dbg_counter_cnt;
 }
