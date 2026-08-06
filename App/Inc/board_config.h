@@ -1,5 +1,5 @@
-#ifndef BOARD_CONFIG_H_
-#define BOARD_CONFIG_H_
+#ifndef JIGU_GPIO_BOARD_CONFIG_H_
+#define JIGU_GPIO_BOARD_CONFIG_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,6 +7,7 @@ extern "C" {
 
 #include "main.h"
 #include "tim.h"
+#include "usart.h"
 
 /*
  * Board-specific PWM port configuration.
@@ -30,6 +31,7 @@ extern "C" {
  */
 #define PWM_TIMER_HANDLE              htim1
 #define PWM_COUNTER_HANDLE            htim2
+#define APP_UART_HANDLE               huart2
 
 #define PWM_CHANNEL                   TIM_CHANNEL_1
 #define PWM_ACTIVE_CHANNEL            HAL_TIM_ACTIVE_CHANNEL_1
@@ -55,16 +57,11 @@ extern "C" {
 #elif defined(STM32L053xx)
 
 /*
- * NUCLEO-L053R8
+ * Common STM32L053 configuration
  *
- * PWM output : PB14 / TIM21_CH2
- * Pulse count: PA1  / TIM2_CH2
- *
- * TIM21 has a single global interrupt on STM32L0.
- * Therefore PWM_UPDATE_IRQn and PWM_CC_IRQn intentionally use the same IRQn.
+ * PWM output: PB14 / TIM21_CH2
  */
 #define PWM_TIMER_HANDLE              htim21
-#define PWM_COUNTER_HANDLE            htim2
 
 #define PWM_CHANNEL                   TIM_CHANNEL_2
 #define PWM_ACTIVE_CHANNEL            HAL_TIM_ACTIVE_CHANNEL_2
@@ -87,12 +84,32 @@ extern "C" {
 #define PWM_TIMER_PCLK_FREQ()         HAL_RCC_GetPCLK2Freq()
 #define PWM_TIMER_APB_DIVIDER_FIELD   APB2CLKDivider
 
+#if defined(BOARD_STM32L0538_DISCO)
+
+/* STM32L0538-DISCO: PA7 / TIM22_CH2 */
+#define PWM_COUNTER_HANDLE            htim22
+#define APP_UART_HANDLE               huart1
+#define APP_GPIO1_PORT                GPIOB
+#define APP_GPIO1_PIN                 GPIO_PIN_12
+
+#elif defined(BOARD_NUCLEO_L053R8)
+
+/* NUCLEO-L053R8: PA1 / TIM2_CH2 */
+#define PWM_COUNTER_HANDLE            htim2
+#define APP_UART_HANDLE               huart2
+#define APP_GPIO1_PORT                GPIOA
+#define APP_GPIO1_PIN                 GPIO_PIN_6
+
+#else
+#error "STM32L053 board is not selected."
+#endif /* STM32L053 board selection */
+
 #else
 #error "Unsupported STM32 target. Add board configuration to board_config.h."
-#endif
+#endif /* STM32 target selection */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* BOARD_CONFIG_H_ */
+#endif /* JIGU_GPIO_BOARD_CONFIG_H_ */

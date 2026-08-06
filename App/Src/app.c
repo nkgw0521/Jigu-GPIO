@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2023
  * 
  */
+#include "board_config.h"
 #include "system.h"
 #include "scpi/scpi.h"
 #include "scpi.h"
@@ -73,7 +74,7 @@ extern void pwm_service(void);
 void app_main(void)
 {
 	GPIO_Init( ) ;
-	UART_Init( &huart2 ) ;
+	UART_Init( &APP_UART_HANDLE ) ;
 	GPIO_LedWrite( GPIO_HIGH ) ;
 
 	SCPI_PwmReset();
