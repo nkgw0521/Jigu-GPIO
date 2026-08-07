@@ -653,9 +653,8 @@ SCPI_PwmStart( scpi_t * context )
 	}
 	else
 	{
-		pwm_param.start = param1;
 
-		if (pwm_param.start)
+		if (param1)
 		{
 			pwm_generator_config_t cfg = {
 				.freq_hz = pwm_param.freq,
@@ -666,7 +665,12 @@ SCPI_PwmStart( scpi_t * context )
 
 			if (!pwm_generator_start(&cfg))
 			{
-				Error_Handler();
+				pwm_param.start = 0;
+				result = SCPI_RES_ERR;
+			}
+			else
+			{
+				pwm_param.start = 1;
 			}
 		}
 		else
