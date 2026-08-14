@@ -45,6 +45,7 @@ struct _scpi_pwm_param_t {
 	Bool		start;
 	uint32_t	count;
 	uint32_t	numbers;	/* PWM:Numbers 用 */
+	Bool		sync;
 };
 typedef struct _scpi_pwm_param_t	scpi_pwm_param_t;
 
@@ -72,7 +73,7 @@ enum_gpio_id_t
 gGPIO_PinId = PIN01 ;
 
 static
-scpi_pwm_param_t pwm_param = { 50, 1, 1, 0, 0, 0 } ;
+scpi_pwm_param_t pwm_param = { 50, 1, 1, 0, 0, 0, 0 } ;
 
 
 const scpi_choice_def_t	tblGpioMode[] = {
@@ -175,6 +176,13 @@ SCPI_PwmWidthQ( scpi_t * context ) ;
 
 static
 scpi_result_t
+SCPI_PwmSync( scpi_t * context ) ;
+static
+scpi_result_t
+SCPI_PwmSyncQ( scpi_t * context ) ;
+
+static
+scpi_result_t
 SCPI_PwmPolarity( scpi_t * context ) ;
 static
 scpi_result_t
@@ -253,6 +261,8 @@ const scpi_command_t scpi_commands[] = {
 	{ .pattern = "PWM:Frequency?", .callback = SCPI_PwmFrequencyQ, },
 	{ .pattern = "PWM:Width", .callback = SCPI_PwmWidth, },
 	{ .pattern = "PWM:Width?", .callback = SCPI_PwmWidthQ, },
+	{ .pattern = "PWM:SYNC", .callback = SCPI_PwmSync, },
+	{ .pattern = "PWM:SYNC?", .callback = SCPI_PwmSyncQ, },
 	{ .pattern = "PWM:POLarity"/* {0|1} */, .callback = SCPI_PwmPolarity, },
 	{ .pattern = "PWM:POLarity?", .callback = SCPI_PwmPolarityQ, },
 	{ .pattern = "PWM:STart", .callback = SCPI_PwmStart, },
@@ -567,8 +577,36 @@ SCPI_PwmFrequency( scpi_t * context )
 
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
-		pwm_param.freq = param1.content.value ;
-		SCPI_PwmReset();
+		uint32_t freq = (uint32_t)param1.content.value;
+
+		if (pwm_param.sync)
+		{
+			if (pwm_param.start)
+			{
+				if ((pwm_param.numbers > 0U) ||
+					!pwm_generator_update_output_sync(freq, pwm_param.width))
+				{
+					result = SCPI_RES_ERR;
+				}
+				else
+				{
+					pwm_param.freq = freq;
+				}
+			}
+			else if (!pwm_generator_validate_output(freq, pwm_param.width))
+			{
+				result = SCPI_RES_ERR;
+			}
+			else
+			{
+				pwm_param.freq = freq;
+			}
+		}
+		else
+		{
+			pwm_param.freq = freq;
+			SCPI_PwmReset();
+		}
 	}
 	else
 	{
@@ -595,8 +633,36 @@ SCPI_PwmWidth( scpi_t * context )
 
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
-		pwm_param.width = param1.content.value ;
-		SCPI_PwmReset();
+		uint32_t width = (uint32_t)param1.content.value;
+
+		if (pwm_param.sync)
+		{
+			if (pwm_param.start)
+			{
+				if ((pwm_param.numbers > 0U) ||
+					!pwm_generator_update_output_sync(pwm_param.freq, width))
+				{
+					result = SCPI_RES_ERR;
+				}
+				else
+				{
+					pwm_param.width = width;
+				}
+			}
+			else if (!pwm_generator_validate_output(pwm_param.freq, width))
+			{
+				result = SCPI_RES_ERR;
+			}
+			else
+			{
+				pwm_param.width = width;
+			}
+		}
+		else
+		{
+			pwm_param.width = width;
+			SCPI_PwmReset();
+		}
 	}
 	else
 	{
@@ -613,6 +679,29 @@ SCPI_PwmWidthQ( scpi_t * context )
 	return result ;
 }
 
+static
+scpi_result_t
+SCPI_PwmSync( scpi_t * context )
+{
+	scpi_bool_t param1;
+
+	if (!SCPI_ParamBool(context, &param1, TRUE))
+	{
+		return SCPI_RES_ERR;
+	}
+
+	pwm_param.sync = param1;
+	return SCPI_RES_OK;
+}
+
+static
+scpi_result_t
+SCPI_PwmSyncQ( scpi_t * context )
+{
+	SCPI_ResultBool(context, pwm_param.sync);
+	return SCPI_RES_OK;
+}
+
 
 static
 scpi_result_t
@@ -626,8 +715,18 @@ SCPI_PwmPolarity( scpi_t * context )
 	}
 	else
 	{
-		pwm_param.polarity = param1;
-		SCPI_PwmReset();
+		if (pwm_param.sync && pwm_param.start)
+		{
+			result = SCPI_RES_ERR;
+		}
+		else
+		{
+			pwm_param.polarity = param1;
+			if (!pwm_param.sync)
+			{
+				SCPI_PwmReset();
+			}
+		}
 }
 	return result ;
 }

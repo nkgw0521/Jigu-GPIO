@@ -29,6 +29,12 @@ static uint32_t pwm_port_get_timer_clk_hz(void)
     }
 }
 
+typedef struct {
+    uint16_t psc;
+    uint16_t arr;
+    uint16_t ccr;
+} pwm_port_output_values_t;
+
 static bool pwm_port_find_best_freq(uint32_t target_freq_hz,
                                     uint16_t *out_psc,
                                     uint16_t *out_arr,
@@ -94,11 +100,15 @@ static void pwm_port_configure_counter_completion_edge(uint32_t polarity)
     }
 }
 
-bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t polarity)
+static bool pwm_port_calculate_output(uint32_t freq_hz,
+                                      uint32_t width_us,
+                                      pwm_port_output_values_t *values)
 {
-    TIM_OC_InitTypeDef sConfigOC = {0};
+    uint16_t psc = 0;
+    uint16_t arr = 0;
+    uint32_t actual_freq_hz = 0;
 
-    if (freq_hz == 0U) {
+    if ((freq_hz == 0U) || (values == NULL)) {
         return false;
     }
 
@@ -106,10 +116,6 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     if ((width_us == 0U) || (width_us >= period_us)) {
         return false;
     }
-
-    uint16_t psc = 0;
-    uint16_t arr = 0;
-    uint32_t actual_freq_hz = 0;
 
     if (!pwm_port_find_best_freq(freq_hz, &psc, &arr, &actual_freq_hz)) {
         return false;
@@ -126,16 +132,29 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
         ccr64 = (uint64_t)(arr + 1U);
     }
 
-    uint16_t ccr = (uint16_t)ccr64;
+    values->psc = psc;
+    values->arr = arr;
+    values->ccr = (uint16_t)ccr64;
+    return true;
+}
 
-    PWM_TIMER_HANDLE.Init.Prescaler = psc;
-    PWM_TIMER_HANDLE.Init.Period = arr;
+bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t polarity)
+{
+    TIM_OC_InitTypeDef sConfigOC = {0};
+    pwm_port_output_values_t values;
+
+    if (!pwm_port_calculate_output(freq_hz, width_us, &values)) {
+        return false;
+    }
+
+    PWM_TIMER_HANDLE.Init.Prescaler = values.psc;
+    PWM_TIMER_HANDLE.Init.Period = values.arr;
     if (HAL_TIM_PWM_Init(&PWM_TIMER_HANDLE) != HAL_OK) {
         return false;
     }
 
     sConfigOC.OCMode = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse = ccr;
+    sConfigOC.Pulse = values.ccr;
     sConfigOC.OCPolarity = (polarity == 0U) ? TIM_OCPOLARITY_LOW : TIM_OCPOLARITY_HIGH;
     sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 
@@ -161,6 +180,41 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     }
 
     pwm_port_configure_counter_completion_edge(polarity);
+
+    return true;
+}
+
+bool pwm_port_validate_output(uint32_t freq_hz, uint32_t width_us)
+{
+    pwm_port_output_values_t values;
+    return pwm_port_calculate_output(freq_hz, width_us, &values);
+}
+
+bool pwm_port_update_output_sync(uint32_t freq_hz, uint32_t width_us)
+{
+    pwm_port_output_values_t values;
+    uint32_t primask;
+
+    if (!pwm_port_calculate_output(freq_hz, width_us, &values)) {
+        return false;
+    }
+
+    /*
+     * PSC is buffered by the timer. ARR and CCR preload are enabled during
+     * timer/channel initialization. Updating all three with interrupts masked
+     * makes them take effect together at the next normal update event without
+     * truncating the pulse currently being output.
+     */
+    primask = __get_PRIMASK();
+    __disable_irq();
+    __HAL_TIM_SET_PRESCALER(&PWM_TIMER_HANDLE, values.psc);
+    __HAL_TIM_SET_AUTORELOAD(&PWM_TIMER_HANDLE, values.arr);
+    __HAL_TIM_SET_COMPARE(&PWM_TIMER_HANDLE, PWM_CHANNEL, values.ccr);
+    PWM_TIMER_HANDLE.Init.Prescaler = values.psc;
+    PWM_TIMER_HANDLE.Init.Period = values.arr;
+    if (primask == 0U) {
+        __enable_irq();
+    }
 
     return true;
 }

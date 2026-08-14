@@ -36,6 +36,8 @@ typedef struct {
 
 bool pwm_generator_start(const pwm_generator_config_t *cfg);
 void pwm_generator_stop(void);
+bool pwm_generator_validate_output(uint32_t freq_hz, uint32_t width_us);
+bool pwm_generator_update_output_sync(uint32_t freq_hz, uint32_t width_us);
 
 void pwm_generator_set_numbers(uint32_t numbers);
 void pwm_generator_reset_shot_count(void);

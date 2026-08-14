@@ -125,6 +125,20 @@ void pwm_generator_stop(void)
     pwm_start_state_set(false);
 }
 
+bool pwm_generator_validate_output(uint32_t freq_hz, uint32_t width_us)
+{
+    return pwm_port_validate_output(freq_hz, width_us);
+}
+
+bool pwm_generator_update_output_sync(uint32_t freq_hz, uint32_t width_us)
+{
+    if (!g_pwm_running || (g_pwm_numbers != 0U) || g_pwm_waiting_cc_stop) {
+        return false;
+    }
+
+    return pwm_port_update_output_sync(freq_hz, width_us);
+}
+
 void pwm_generator_service(void)
 {
     /* No background stop processing is required in the current design. */
