@@ -147,6 +147,8 @@ Note: On STM32L053R8/TIM21, advanced timer idle-state control is not available, 
 - `PWM:Numbers >= 1`
   - Output stops after the specified number of pulses
   - The following PWM period is suppressed in hardware, so interrupt latency does not create a short extra pulse
+  - Repeated starts reload the configured pulse width before output begins
+  - The output channel and update interrupt are armed before the timer starts, preserving the first pulse width and period
   - Actual pulse count can be verified using the board-specific external counter
 
 ---

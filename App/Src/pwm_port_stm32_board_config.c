@@ -229,19 +229,32 @@ bool pwm_port_start_output(void)
         return false;
     }
 
-    __HAL_TIM_SET_COUNTER(&PWM_TIMER_HANDLE, 0);
-    __HAL_TIM_ENABLE(&PWM_TIMER_HANDLE);
-    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG);
-    HAL_NVIC_ClearPendingIRQ(PWM_UPDATE_IRQn);
-
-    status = HAL_TIM_PWM_Start(&PWM_TIMER_HANDLE, PWM_CHANNEL);
-    if (status != HAL_OK) {
+    /*
+     * A completed finite run leaves zero in the CCR preload register to
+     * suppress an extra pulse. Reload the configured PSC/ARR/CCR values while
+     * the output is still disabled, otherwise the first pulse of a later run
+     * is suppressed as well.
+     */
+    if (HAL_TIM_GenerateEvent(&PWM_TIMER_HANDLE, TIM_EVENTSOURCE_UPDATE) != HAL_OK) {
+        HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
         return false;
     }
 
-    status = HAL_TIM_Base_Start_IT(&PWM_TIMER_HANDLE);
+    __HAL_TIM_SET_COUNTER(&PWM_TIMER_HANDLE, 0);
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG);
+    HAL_NVIC_ClearPendingIRQ(PWM_UPDATE_IRQn);
+
+    /*
+     * Arm the update interrupt before HAL_TIM_PWM_Start() enables the timer.
+     * Starting the timer first makes CNT advance while the output channel is
+     * still disabled, shortening only the first pulse and its first period.
+     */
+    __HAL_TIM_ENABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
+
+    status = HAL_TIM_PWM_Start(&PWM_TIMER_HANDLE, PWM_CHANNEL);
     if (status != HAL_OK) {
-        HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
+        __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
+        HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
         return false;
     }
 
