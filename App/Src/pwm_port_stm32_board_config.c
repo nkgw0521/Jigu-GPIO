@@ -262,6 +262,17 @@ void pwm_port_stop_output_from_isr(void)
     HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
 }
 
+void pwm_port_suppress_next_pulse(void)
+{
+    /*
+     * CCR preload is enabled by HAL_TIM_PWM_ConfigChannel(). This write is
+     * therefore transferred to the active CCR at the next update event. A
+     * zero compare value keeps PWM mode 1 inactive for the whole next period,
+     * even if the compare ISR that stops the timer is delayed past that event.
+     */
+    __HAL_TIM_SET_COMPARE(&PWM_TIMER_HANDLE, PWM_CHANNEL, 0U);
+}
+
 void pwm_port_disable_update_irq(void)
 {
     __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);

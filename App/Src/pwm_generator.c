@@ -173,6 +173,8 @@ void pwm_generator_on_period_elapsed(void)
         g_pwm_waiting_cc_stop = true;
         g_pwm_stop_pending = true;
 
+        /* Prevent a delayed stop ISR from allowing a short extra pulse. */
+        pwm_port_suppress_next_pulse();
         pwm_port_disable_update_irq();
         pwm_port_clear_compare_flag();
         pwm_port_clear_compare_pending_irq();

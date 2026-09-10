@@ -28,6 +28,7 @@ bool pwm_port_update_output_sync(uint32_t freq_hz, uint32_t width_us);
 bool pwm_port_start_output(void);
 void pwm_port_stop_all(void);
 void pwm_port_stop_output_from_isr(void);
+void pwm_port_suppress_next_pulse(void);
 
 void pwm_port_disable_update_irq(void);
 void pwm_port_enable_compare_irq(void);
