@@ -54,10 +54,10 @@ extern "C" {
 #define PWM_TIMER_PCLK_FREQ()         HAL_RCC_GetPCLK2Freq()
 #define PWM_TIMER_APB_DIVIDER_FIELD   APB2CLKDivider
 
-#elif defined(STM32L053xx)
+#elif defined(STM32L053xx) || defined(STM32L073xx)
 
 /*
- * Common STM32L053 configuration
+ * Common STM32L053 / STM32L073 configuration
  *
  * PWM output: PB14 / TIM21_CH2
  */
@@ -84,7 +84,7 @@ extern "C" {
 #define PWM_TIMER_PCLK_FREQ()         HAL_RCC_GetPCLK2Freq()
 #define PWM_TIMER_APB_DIVIDER_FIELD   APB2CLKDivider
 
-#if defined(BOARD_STM32L0538_DISCO)
+#if defined(STM32L053xx) && defined(BOARD_STM32L0538_DISCO)
 
 /* STM32L0538-DISCO: PA7 / TIM22_CH2 */
 #define PWM_COUNTER_HANDLE            htim22
@@ -92,17 +92,18 @@ extern "C" {
 #define APP_GPIO1_PORT                GPIOB
 #define APP_GPIO1_PIN                 GPIO_PIN_12
 
-#elif defined(BOARD_NUCLEO_L053R8)
+#elif (defined(STM32L053xx) && defined(BOARD_NUCLEO_L053R8)) || \
+      (defined(STM32L073xx) && defined(BOARD_NUCLEO_L073RZ))
 
-/* NUCLEO-L053R8: PA1 / TIM2_CH2 */
+/* NUCLEO-L053R8 / NUCLEO-L073RZ: PA1 / TIM2_CH2 */
 #define PWM_COUNTER_HANDLE            htim2
 #define APP_UART_HANDLE               huart2
 #define APP_GPIO1_PORT                GPIOA
 #define APP_GPIO1_PIN                 GPIO_PIN_6
 
 #else
-#error "STM32L053 board is not selected."
-#endif /* STM32L053 board selection */
+#error "STM32L0 board is not selected or does not match the MCU."
+#endif /* STM32L0 board selection */
 
 #else
 #error "Unsupported STM32 target. Add board configuration to board_config.h."

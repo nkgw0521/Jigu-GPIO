@@ -8,6 +8,7 @@ SCPI-controlled GPIO and PWM generator for STM32 Nucleo and Discovery boards.
 |---------|---------|---------|
 | NUCLEO-L432KC | STM32L432KC | Supported |
 | NUCLEO-L053R8 | STM32L053R8 | Supported |
+| NUCLEO-L073RZ | STM32L073RZ | Supported |
 | STM32L0538-DISCO | STM32L053C8 | Supported |
 
 ---
@@ -33,6 +34,12 @@ Boards/
     Core/
     Drivers/
     STM32L053R8TX_FLASH.ld
+    Jigu-GPIO.ioc
+
+  NUCLEO_L073RZ/
+    Core/
+    Drivers/
+    STM32L073RZTX_FLASH.ld
     Jigu-GPIO.ioc
 
   STM32L0538-DISCO/
@@ -137,7 +144,7 @@ Hi -> Lo -> Hi -> Lo -> Hi -> Lo -> Hi
 
 The final High level is part of the normal PWM waveform and is not considered a glitch.
 
-Note: On STM32L053R8/TIM21, advanced timer idle-state control is not available, so Active Low stop waveform may differ from STM32L432KC/TIM1.
+Note: On STM32L053R8/TIM21 and STM32L073RZ/TIM21, advanced timer idle-state control is not available, so Active Low stop waveform may differ from STM32L432KC/TIM1.
 
 ### Pulse Count Control (PWM:Numbers)
 
@@ -171,6 +178,16 @@ Note: On STM32L053R8/TIM21, advanced timer idle-state control is not available, 
 | PA6 | GPIO1 |
 | PA1 | PWM In / Counter (TIM2_CH2) |
 
+### NUCLEO-L073RZ
+
+| Pin | Function |
+|-----|----------|
+| PB14 | PWM Out (TIM21_CH2) |
+| PA6 | GPIO1 |
+| PA1 | PWM In / Counter (TIM2_CH2) |
+| PA2 | UART TX (USART2 / ST-LINK VCP) |
+| PA3 | UART RX (USART2 / ST-LINK VCP) |
+
 ### STM32L0538-DISCO
 
 | Pin | Function |
@@ -200,6 +217,7 @@ Notes:
 
 - `-Og` provides a good balance between code size and debugging capability.
 - STM32L053R8 has 64 KB Flash memory.
+- STM32L073RZ has 192 KB Flash and 20 KB RAM.
 - Debug builds using `-O0` may exceed available Flash size.
 
 ---
@@ -213,6 +231,12 @@ PA8 (PWM Out) -> PA1 (Counter In)
 ```
 
 ### NUCLEO-L053R8
+
+```text
+PB14 (PWM Out) -> PA1 (Counter In)
+```
+
+### NUCLEO-L073RZ
 
 ```text
 PB14 (PWM Out) -> PA1 (Counter In)
@@ -236,9 +260,10 @@ Open SB25 before using PA7 as the counter input.
 |-------|----------------|------------------|------|---------|
 | NUCLEO-L432KC | `STM32L432xx` | Not required | USART2 (`huart2`) | TIM2 (`htim2`) |
 | NUCLEO-L053R8 | `STM32L053xx` | `BOARD_NUCLEO_L053R8` | USART2 (`huart2`) | TIM2 (`htim2`) |
+| NUCLEO-L073RZ | `STM32L073xx` | `BOARD_NUCLEO_L073RZ` | USART2 (`huart2`) | TIM2 (`htim2`) |
 | STM32L0538-DISCO | `STM32L053xx` | `BOARD_STM32L0538_DISCO` | USART1 (`huart1`) | TIM22 (`htim22`) |
 
-The two STM32L053 boards use the same MCU family definition, so a board definition is required to distinguish their UART, GPIO, and counter instances. Define the selected board symbol for both Debug and Release configurations in STM32CubeIDE.
+The two STM32L053 boards use the same MCU family definition, so a board definition is required to distinguish their UART, GPIO, and counter instances. Define the selected board symbol for both Debug and Release configurations in STM32CubeIDE. NUCLEO-L073RZ also requires its board symbol; the supplied project defines it in both configurations.
 
 ---
 
