@@ -21,16 +21,21 @@ extern "C" {
  * - CubeMX must provide the handle names used below.
  */
 
-#if defined(STM32L432xx)
+#if defined(STM32L432xx) || (defined(STM32F303x8) && defined(BOARD_NUCLEO_F303K8))
 
 /*
- * NUCLEO-L432KC
+ * NUCLEO-L432KC / NUCLEO-F303K8
  *
  * PWM output : PA8 / TIM1_CH1
- * Pulse count: PA1 / TIM2_CH2
+ * Pulse count: L432KC PA1 / TIM2_CH2; F303K8 PB5 / TIM3_CH2
  */
 #define PWM_TIMER_HANDLE              htim1
+#if defined(STM32F303x8) && defined(BOARD_NUCLEO_F303K8)
+#define PWM_COUNTER_HANDLE            htim3
+#define PWM_COUNTER_SOFTWARE_EXTENSION
+#else
 #define PWM_COUNTER_HANDLE            htim2
+#endif
 #define APP_UART_HANDLE               huart2
 
 #define PWM_CHANNEL                   TIM_CHANNEL_1

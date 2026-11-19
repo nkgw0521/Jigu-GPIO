@@ -1,0 +1,133 @@
+{
+  "method": "hardware breakpoints; no Flash or source writes; timers frozen during halt; levels valid, pause durations not waveform timing",
+  "rows": [
+    {
+      "polarity": 0,
+      "stage": "before_GPIO_to_AF",
+      "pc": "pc 0x080030ea",
+      "PB14_level": 1,
+      "PA1_level": 1,
+      "PB14_mode": 1,
+      "PB14_pull": 1,
+      "PB14_ODR": 1,
+      "TIM21_CC2E": 0,
+      "TIM21_CC2P": 1,
+      "TIM21_CEN": 0,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 0,
+      "stage": "after_GPIO_to_AF_before_HAL",
+      "pc": "pc 0x080030ec",
+      "PB14_level": 0,
+      "PA1_level": 0,
+      "PB14_mode": 2,
+      "PB14_pull": 1,
+      "PB14_ODR": 1,
+      "TIM21_CC2E": 0,
+      "TIM21_CC2P": 1,
+      "TIM21_CEN": 0,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 0,
+      "stage": "after_HAL_output_enable",
+      "pc": "pc 0x080030f2",
+      "PB14_level": 1,
+      "PA1_level": 1,
+      "PB14_mode": 2,
+      "PB14_pull": 1,
+      "PB14_ODR": 1,
+      "TIM21_CC2E": 1,
+      "TIM21_CC2P": 1,
+      "TIM21_CEN": 1,
+      "TIM2_count": 1
+    },
+    {
+      "polarity": 0,
+      "stage": "before_real_UG",
+      "pc": "pc 0x080030fe",
+      "PB14_level": 1,
+      "PA1_level": 1,
+      "PB14_mode": 2,
+      "PB14_pull": 1,
+      "PB14_ODR": 1,
+      "TIM21_CC2E": 1,
+      "TIM21_CC2P": 1,
+      "TIM21_CEN": 1,
+      "TIM2_count": 1
+    },
+    {
+      "polarity": 0,
+      "stage": "completed_unpaused",
+      "count": "2",
+      "running": "0",
+      "error": "0,\"No error\""
+    },
+    {
+      "polarity": 1,
+      "stage": "before_GPIO_to_AF",
+      "pc": "pc 0x080030ea",
+      "PB14_level": 0,
+      "PA1_level": 0,
+      "PB14_mode": 1,
+      "PB14_pull": 2,
+      "PB14_ODR": 0,
+      "TIM21_CC2E": 0,
+      "TIM21_CC2P": 0,
+      "TIM21_CEN": 0,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 1,
+      "stage": "after_GPIO_to_AF_before_HAL",
+      "pc": "pc 0x080030ec",
+      "PB14_level": 0,
+      "PA1_level": 0,
+      "PB14_mode": 2,
+      "PB14_pull": 2,
+      "PB14_ODR": 0,
+      "TIM21_CC2E": 0,
+      "TIM21_CC2P": 0,
+      "TIM21_CEN": 0,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 1,
+      "stage": "after_HAL_output_enable",
+      "pc": "pc 0x080030f2",
+      "PB14_level": 0,
+      "PA1_level": 0,
+      "PB14_mode": 2,
+      "PB14_pull": 2,
+      "PB14_ODR": 0,
+      "TIM21_CC2E": 1,
+      "TIM21_CC2P": 0,
+      "TIM21_CEN": 1,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 1,
+      "stage": "before_real_UG",
+      "pc": "pc 0x080030fe",
+      "PB14_level": 0,
+      "PA1_level": 0,
+      "PB14_mode": 2,
+      "PB14_pull": 2,
+      "PB14_ODR": 0,
+      "TIM21_CC2E": 1,
+      "TIM21_CC2P": 0,
+      "TIM21_CEN": 1,
+      "TIM2_count": 0
+    },
+    {
+      "polarity": 1,
+      "stage": "completed_unpaused",
+      "count": "1",
+      "running": "0",
+      "error": "0,\"No error\""
+    }
+  ],
+  "FlashUnchanged": true,
+  "FlashSHA256": "a8af8326f7acf6da769866fd9077f22f92a3b74c92800111689dbeb0337cc8a0"
+}

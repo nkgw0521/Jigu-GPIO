@@ -1,0 +1,97 @@
+{
+  "Port": "COM16",
+  "Firmware": "production release restored and verified after capture tests",
+  "Results": [
+    {
+      "Polarity": 0,
+      "Pulses": 1,
+      "Count": 1,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 0,
+      "Pulses": 2,
+      "Count": 2,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 0,
+      "Pulses": 10,
+      "Count": 10,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 0,
+      "Pulses": 1,
+      "Count": 1,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 0,
+      "Mode": "continuous then explicit stop",
+      "First": 92,
+      "Second": 182,
+      "Stopped": 222,
+      "Stable": 222,
+      "Pass": true
+    },
+    {
+      "Polarity": 1,
+      "Pulses": 1,
+      "Count": 1,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 1,
+      "Pulses": 2,
+      "Count": 2,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 1,
+      "Pulses": 10,
+      "Count": 10,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 1,
+      "Pulses": 1,
+      "Count": 1,
+      "Running": "0",
+      "Error": "0,\"No error\"",
+      "Pass": true
+    },
+    {
+      "Polarity": 1,
+      "Mode": "continuous then explicit stop",
+      "First": 92,
+      "Second": 183,
+      "Stopped": 222,
+      "Stable": 222,
+      "Pass": true
+    }
+  ],
+  "FinalSettings": {
+    "STart": "0",
+    "Frequency": "50",
+    "Width": "100",
+    "POLarity": "1",
+    "Numbers": "0",
+    "SYNC": "0",
+    "Counter": "0"
+  }
+}

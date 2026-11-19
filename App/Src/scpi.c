@@ -94,7 +94,9 @@ const scpi_choice_def_t	tblGpioSpeed[] = {
 	{	"Low",			GPIO_SPEED_FREQ_LOW	},
 	{	"Medium",		GPIO_SPEED_FREQ_MEDIUM	},
 	{	"Hight",		GPIO_SPEED_FREQ_HIGH	},
+#if defined(GPIO_SPEED_FREQ_VERY_HIGH)
 	{	"Veryhight",	GPIO_SPEED_FREQ_VERY_HIGH	},
+#endif
 	SCPI_CHOICE_LIST_END
 } ;
 
@@ -767,10 +769,8 @@ SCPI_PwmStart( scpi_t * context )
 				pwm_param.start = 0;
 				result = SCPI_RES_ERR;
 			}
-			else
-			{
-				pwm_param.start = 1;
-			}
+			/* The generator publishes start before enabling output. Its ISR may
+			 * already have cleared the state for a very short finite pulse. */
 		}
 		else
 		{
@@ -801,7 +801,11 @@ SCPI_PwmCounter( scpi_t * context )
 	if ( SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, TRUE) )
 	{
 		pwm_param.count = param1.content.value ;
+#if defined(STM32F303x8) && defined(BOARD_NUCLEO_F303K8)
+		SetPulseCount( pwm_param.count ) ;
+#else
 		SetPulseCount( pwm_param.count & 0x0000FFFF ) ;
+#endif
 	}
 	else
 	{

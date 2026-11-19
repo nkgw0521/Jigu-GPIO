@@ -28,9 +28,15 @@
 #define	GPIO_LED_PIN					GPIO_PIN_3
 
 
+/* F303K8: D2 (PA12), FT input; existing boards retain PA6. */
+#if defined(STM32F303x8) && defined(BOARD_NUCLEO_F303K8)
+#define GPIO_PIN01_PORT GPIOA
+#define GPIO_PIN01_PIN  GPIO_PIN_12
+#else
 /* Arduino A5 (PA6) */
 #define	GPIO_PIN01_PORT					GPIOA
 #define	GPIO_PIN01_PIN					GPIO_PIN_6
+#endif
 
 
 

@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "board": "NUCLEO_L432KC",
+      "source": "gpio.c",
+      "preprocessed_equal": true,
+      "sha256": "6dbdaec4ec1ae3a2a14c55db6a6101a98c246aade0eb53d76670665401cd2a12",
+      "syntax": "pass"
+    },
+    {
+      "board": "NUCLEO_L432KC",
+      "source": "pwm_port_stm32_board_config.c",
+      "preprocessed_equal": true,
+      "sha256": "ec4df25648e5addba17322216bb24a42d5c42fabfe88d9b00a7689de67e71396",
+      "syntax": "pass"
+    },
+    {
+      "board": "NUCLEO_L053R8",
+      "source": "gpio.c",
+      "preprocessed_equal": true,
+      "sha256": "cd9e394871e0049b72c05b5285f47f6a2744be6afe1599248d3f069f2e2922af",
+      "syntax": "pass"
+    },
+    {
+      "board": "NUCLEO_L053R8",
+      "source": "pwm_port_stm32_board_config.c",
+      "preprocessed_equal": true,
+      "sha256": "2827088b858dead5462a3239ea9ff65356e0eb3ff97d0ced2b54f0b3090fa1f3",
+      "syntax": "pass"
+    },
+    {
+      "board": "NUCLEO-L073RZ",
+      "source": "gpio.c",
+      "preprocessed_equal": true,
+      "sha256": "09f40c7c99178356134221a4bc74733fca7519c6c84e26c2841b4df931d5f25c",
+      "syntax": "pass"
+    },
+    {
+      "board": "NUCLEO-L073RZ",
+      "source": "pwm_port_stm32_board_config.c",
+      "preprocessed_equal": true,
+      "sha256": "9937b91e288f798f64000fbaf62fba6a29b3dd1824e8845c99ceca35b3c4a16d",
+      "syntax": "pass"
+    },
+    {
+      "board": "STM32L0538-DISCO",
+      "source": "gpio.c",
+      "preprocessed_equal": true,
+      "sha256": "7cef0c72f40e88f604fc2d28974ecde0300774466b24e9ad6956f9b5a97b55a4",
+      "syntax": "pass"
+    },
+    {
+      "board": "STM32L0538-DISCO",
+      "source": "pwm_port_stm32_board_config.c",
+      "preprocessed_equal": true,
+      "sha256": "f72852904d9c7e10eb49fbfcf37a5483f57f7e0c890d70355ef4d852e757ca2f",
+      "syntax": "pass"
+    }
+  ],
+  "other_board_files_unchanged": 445
+}

@@ -1,0 +1,81 @@
+{
+  "Date": "2026-11-19",
+  "SourceSHA256": "156b7747a354b5bb088a6f8c5124401598324d941b50e265fecca48ac3236d7e",
+  "AllBuildsUseCurrentCommonSource": true,
+  "Builds": [
+    {
+      "board": "NUCLEO-L073RZ",
+      "configuration": "Debug",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO-L073RZ-Debug.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO-L073RZ",
+      "configuration": "Release",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO-L073RZ-Release.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO_L053R8",
+      "configuration": "Debug",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO_L053R8-Debug.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO_L053R8",
+      "configuration": "Release",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO_L053R8-Release.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO_L432KC",
+      "configuration": "Debug",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO_L432KC-Debug.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO_L432KC",
+      "configuration": "Release",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO_L432KC-Release.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "STM32L0538-DISCO",
+      "configuration": "Debug",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-STM32L0538-DISCO-Debug.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "STM32L0538-DISCO",
+      "configuration": "Release",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-STM32L0538-DISCO-Release.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-common-PWM-build-20261119"
+    },
+    {
+      "board": "NUCLEO-F303K8",
+      "configuration": "Debug",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO-F303K8-Debug.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-handoff-F303"
+    },
+    {
+      "board": "NUCLEO-F303K8",
+      "configuration": "Release",
+      "exit_code": 0,
+      "log": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-NUCLEO-F303K8-Release.log",
+      "root": "C:\\Users\\YNAKAG~1.CIS\\AppData\\Local\\Temp\\Jigu-idle-handoff-F303"
+    }
+  ],
+  "HostTests": [
+    "CH1/PA8 and CH2/PB14 both polarities passed",
+    "production F303 counter32 boundary/race tests passed"
+  ]
+}

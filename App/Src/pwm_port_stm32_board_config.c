@@ -6,6 +6,9 @@
 #include "pwm_port.h"
 #include "pwm_generator.h"
 #include "board_config.h"
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+#include "counter32.h"
+#endif
 
 /*
  * Common STM32 HAL PWM port implementation.
@@ -13,6 +16,34 @@
  * Board-specific handle/channel/IRQ/pin differences are kept in board_config.h.
  * Generator and SCPI code must not directly access TIM/GPIO/HAL details.
  */
+
+static GPIO_PinState pwm_idle_level = GPIO_PIN_RESET;
+static bool pwm_single_pulse;
+
+void pwm_port_set_single_pulse(bool enabled)
+{
+    pwm_single_pulse = enabled;
+}
+
+static uint32_t pwm_port_output_mode_shift(void)
+{
+    uint32_t pin = PWM_OUTPUT_GPIO_PIN;
+    uint32_t shift = 0;
+    while (pin > 1U) {
+        pin >>= 1;
+        shift += 2U;
+    }
+    return shift;
+}
+
+static void pwm_port_hold_idle(void)
+{
+    uint32_t shift = pwm_port_output_mode_shift();
+    /* Disabling a timer channel can leave its AF output undriven. Latch the
+       inactive value before selecting GPIO output on the configured board pin. */
+    HAL_GPIO_WritePin(PWM_OUTPUT_GPIO_PORT, PWM_OUTPUT_GPIO_PIN, pwm_idle_level);
+    MODIFY_REG(PWM_OUTPUT_GPIO_PORT->MODER, 3UL << shift, 1UL << shift);
+}
 
 static uint32_t pwm_port_get_timer_clk_hz(void)
 {
@@ -82,7 +113,7 @@ static bool pwm_port_find_best_freq(uint32_t target_freq_hz,
 static void pwm_port_configure_counter_completion_edge(uint32_t polarity)
 {
     /*
-     * TIM2 is configured by CubeMX as:
+     * The counter timer is configured by CubeMX as:
      *   External Clock Mode 1
      *   Trigger Source = TI2FP2
      *
@@ -146,6 +177,13 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
     if (!pwm_port_calculate_output(freq_hz, width_us, &values)) {
         return false;
     }
+
+    pwm_idle_level = (polarity == 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    /* Hold inactive through the brief GPIO-to-AF handoff at start. */
+    uint32_t mode_shift = pwm_port_output_mode_shift();
+    MODIFY_REG(PWM_OUTPUT_GPIO_PORT->PUPDR, 3UL << mode_shift,
+               ((polarity == 0U) ? GPIO_PULLUP : GPIO_PULLDOWN) << mode_shift);
+    pwm_port_hold_idle();
 
     PWM_TIMER_HANDLE.Init.Prescaler = values.psc;
     PWM_TIMER_HANDLE.Init.Period = values.arr;
@@ -222,48 +260,100 @@ bool pwm_port_update_output_sync(uint32_t freq_hz, uint32_t width_us)
 bool pwm_port_start_output(void)
 {
     HAL_StatusTypeDef status;
+    uint32_t primask;
+    uint32_t saved_urs;
+    uint32_t pulse;
+    uint32_t mode_shift;
 
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    status = counter32_start();
+#else
     __HAL_TIM_CLEAR_FLAG(&PWM_COUNTER_HANDLE, TIM_FLAG_UPDATE);
     status = HAL_TIM_Base_Start(&PWM_COUNTER_HANDLE);
+#endif
     if (status != HAL_OK) {
         return false;
     }
 
-    /*
-     * A completed finite run leaves zero in the CCR preload register to
-     * suppress an extra pulse. Reload the configured PSC/ARR/CCR values while
-     * the output is still disabled, otherwise the first pulse of a later run
-     * is suppressed as well.
-     */
-    if (HAL_TIM_GenerateEvent(&PWM_TIMER_HANDLE, TIM_EVENTSOURCE_UPDATE) != HAL_OK) {
-        HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
-        return false;
+    primask = __get_PRIMASK();
+    __disable_irq();
+    saved_urs = PWM_TIMER_HANDLE.Instance->CR1 & TIM_CR1_URS;
+    pulse = PWM_TIMER_CCR_VALUE();
+    __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT | PWM_COMPARE_IT);
+    /* Software UG must load/reset the timer without being counted as a PWM
+       period. URS limits update requests to actual counter overflow. */
+    SET_BIT(PWM_TIMER_HANDLE.Instance->CR1, TIM_CR1_URS);
+
+    /* Start all output-enable machinery with an inactive active/shadow CCR.
+       The desired width is written only after the GPIO-to-AF handoff. */
+    __HAL_TIM_SET_COMPARE(&PWM_TIMER_HANDLE, PWM_CHANNEL, 0U);
+    status = HAL_TIM_GenerateEvent(&PWM_TIMER_HANDLE, TIM_EVENTSOURCE_UPDATE);
+    if (status != HAL_OK) {
+        goto start_failed;
     }
-
-    __HAL_TIM_SET_COUNTER(&PWM_TIMER_HANDLE, 0);
-    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG);
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG | PWM_COMPARE_FLAG);
     HAL_NVIC_ClearPendingIRQ(PWM_UPDATE_IRQn);
+    HAL_NVIC_ClearPendingIRQ(PWM_CC_IRQn);
 
-    /*
-     * Arm the update interrupt before HAL_TIM_PWM_Start() enables the timer.
-     * Starting the timer first makes CNT advance while the output channel is
-     * still disabled, shortening only the first pulse and its first period.
-     */
-    __HAL_TIM_ENABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
-
+    /* Keep the pin driven by GPIO until CCxE (and MOE where applicable)
+       drives the timer output inactive. Selecting AF with CCxE clear can
+       produce a Low glitch even with the pin pull-up enabled. Keep both
+       active and preload CCR zero so arming cannot launch an early pulse. */
     status = HAL_TIM_PWM_Start(&PWM_TIMER_HANDLE, PWM_CHANNEL);
     if (status != HAL_OK) {
-        __HAL_TIM_DISABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
-        HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
-        return false;
+        goto start_failed;
     }
 
+    mode_shift = pwm_port_output_mode_shift();
+    MODIFY_REG(PWM_OUTPUT_GPIO_PORT->MODER, 3UL << mode_shift, 2UL << mode_shift);
+
+    /* A very short period may have elapsed while HAL armed the blank output.
+       Discard its flags before (never after) launching the real first pulse. */
+    __HAL_TIM_CLEAR_FLAG(&PWM_TIMER_HANDLE, PWM_UPDATE_FLAG | PWM_COMPARE_FLAG);
+
+    /* CEN and the output channel are already enabled, but CCR=0 keeps the
+       pin inactive. This UG loads the real width and resets CNT/prescaler on
+       the same hardware event, so the first edge has no HAL-start extension. */
+    __HAL_TIM_SET_COMPARE(&PWM_TIMER_HANDLE, PWM_CHANNEL, pulse);
+    status = HAL_TIM_GenerateEvent(&PWM_TIMER_HANDLE, TIM_EVENTSOURCE_UPDATE);
+    if (status != HAL_OK) {
+        goto start_failed;
+    }
+    if (pwm_single_pulse) {
+        /* The real width is active now. Suppress the following period and
+           stop at this first pulse's trailing edge. Do not clear CC here:
+           even a very short first pulse may already have set its flag. */
+        __HAL_TIM_SET_COMPARE(&PWM_TIMER_HANDLE, PWM_CHANNEL, 0U);
+        __HAL_TIM_ENABLE_IT(&PWM_TIMER_HANDLE, PWM_COMPARE_IT);
+    } else {
+        __HAL_TIM_ENABLE_IT(&PWM_TIMER_HANDLE, PWM_UPDATE_IT);
+    }
+    MODIFY_REG(PWM_TIMER_HANDLE.Instance->CR1, TIM_CR1_URS, saved_urs);
+    __set_PRIMASK(primask);
     return true;
+
+start_failed:
+    pwm_port_hold_idle();
+    HAL_TIM_Base_Stop_IT(&PWM_TIMER_HANDLE);
+    HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    counter32_stop();
+#else
+    HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
+#endif
+    MODIFY_REG(PWM_TIMER_HANDLE.Instance->CR1, TIM_CR1_URS, saved_urs);
+    __set_PRIMASK(primask);
+    return false;
 }
 
 void pwm_port_stop_all(void)
 {
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    counter32_stop();
+#else
     HAL_TIM_Base_Stop(&PWM_COUNTER_HANDLE);
+#endif
+    pwm_port_hold_idle();
     HAL_TIM_Base_Stop_IT(&PWM_TIMER_HANDLE);
     HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
     __HAL_TIM_DISABLE(&PWM_TIMER_HANDLE);
@@ -271,6 +361,7 @@ void pwm_port_stop_all(void)
 
 void pwm_port_stop_output_from_isr(void)
 {
+    pwm_port_hold_idle();
     HAL_TIM_Base_Stop_IT(&PWM_TIMER_HANDLE);
     HAL_TIM_PWM_Stop(&PWM_TIMER_HANDLE, PWM_CHANNEL);
 }
@@ -336,18 +427,29 @@ void pwm_port_capture_snapshot(pwm_port_snapshot_t *snapshot)
     snapshot->counter_ccmr1 = PWM_COUNTER_HANDLE.Instance->CCMR1;
     snapshot->counter_ccer = PWM_COUNTER_HANDLE.Instance->CCER;
     snapshot->counter_cr1 = PWM_COUNTER_HANDLE.Instance->CR1;
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    snapshot->counter_cnt = counter32_get();
+#else
     snapshot->counter_cnt = PWM_COUNTER_HANDLE.Instance->CNT;
+#endif
 }
 
 void pwm_port_counter_set(uint32_t value)
 {
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    counter32_set(value);
+#else
     __disable_irq();
     __HAL_TIM_SET_COUNTER(&PWM_COUNTER_HANDLE, value);
     __enable_irq();
+#endif
 }
 
 uint32_t pwm_port_counter_get(void)
 {
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    return counter32_get();
+#else
     uint32_t value;
 
     __disable_irq();
@@ -355,6 +457,7 @@ uint32_t pwm_port_counter_get(void)
     __enable_irq();
 
     return value;
+#endif
 }
 
 void pwm_port_counter_reset(void)
@@ -364,6 +467,12 @@ void pwm_port_counter_reset(void)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+#ifdef PWM_COUNTER_SOFTWARE_EXTENSION
+    if (htim->Instance == PWM_COUNTER_HANDLE.Instance) {
+        counter32_on_overflow();
+        return;
+    }
+#endif
     if (htim->Instance == PWM_TIMER_HANDLE.Instance) {
         pwm_generator_on_period_elapsed();
     }

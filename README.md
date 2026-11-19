@@ -1,21 +1,36 @@
 # Jigu-GPIO
 
-SCPI-controlled GPIO and PWM generator for STM32 Nucleo and Discovery boards.
+STM32 NucleoおよびDiscoveryボード向けの、SCPIで制御するGPIO・PWMジェネレーターです。
 
-## Supported Boards
+## 対応ボード
 
-| Board | MCU | Status |
+| ボード | MCU | 対応状況 |
 |---------|---------|---------|
-| NUCLEO-L432KC | STM32L432KC | Supported |
-| NUCLEO-L053R8 | STM32L053R8 | Supported |
-| NUCLEO-L073RZ | STM32L073RZ | Supported |
-| STM32L0538-DISCO | STM32L053C8 | Supported |
+| NUCLEO-F303K8 | STM32F303K8 | 統合済み。Debug/Releaseビルド確認済み、実機試験待ち |
+| NUCLEO-L432KC | STM32L432KC | 対応済み |
+| NUCLEO-L053R8 | STM32L053R8 | 対応済み |
+| NUCLEO-L073RZ | STM32L073RZ | 対応済み |
+| STM32L0538-DISCO | STM32L053C8 | 対応済み |
 
 ---
 
-## Project Structure
+## Releaseファームウェアのバイナリ
 
-The project is organized to separate application code from board-specific STM32CubeMX generated code.
+全対応ボードの現行ReleaseバイナリをGitで管理しています。ファイル名は現在のビルド成果物名に合わせています。L432の旧ファイル `Jigu-GPIO.bin` は `Jigu-GPIO_L432.bin` に置き換えました。
+
+| ボードフォルダー | Releaseバイナリ |
+|---------|---------|
+| NUCLEO-F303K8 | `Release/NUCLEO-F303K8.bin` |
+| NUCLEO_L432KC | `Release/Jigu-GPIO_L432.bin` |
+| NUCLEO_L053R8 | `Release/Jigu-GPIO_L053.bin` |
+| NUCLEO-L073RZ | `Release/NUCLEO-L073RZ.bin` |
+| STM32L0538-DISCO | `Release/Jigu-GPIO.bin` |
+
+ビルド元の情報、バイト数、SHA-256ハッシュは [tests/release-binaries.json](tests/release-binaries.json) に記録しています。これらのファイルは、記録されたソースコミットから各ボードのRelease設定で再ビルドし、生成したELFからGNU objcopyで出力したバイナリとバイト単位で比較しています。5ボードすべてで、CubeIDEのReleaseビルド時にBINファイルを自動生成します。L073も他のボードと同じツールチェーンオプション「Convert to binary file (-O binary)」を有効にしています。更新したファームウェアを公開する際は、再ビルドしてマニフェストを更新してください。
+
+## プロジェクト構成
+
+アプリケーションコードと、ボードごとにSTM32CubeMXで生成するコードを分離しています。
 
 ```text
 App/
@@ -24,6 +39,12 @@ App/
   Src/
 
 Boards/
+  NUCLEO-F303K8/
+    Core/
+    Drivers/
+    STM32F303K8TX_FLASH.ld
+    NUCLEO-F303K8.ioc
+
   NUCLEO_L432KC/
     Core/
     Drivers/
@@ -36,11 +57,11 @@ Boards/
     STM32L053R8TX_FLASH.ld
     Jigu-GPIO.ioc
 
-  NUCLEO_L073RZ/
+  NUCLEO-L073RZ/
     Core/
     Drivers/
     STM32L073RZTX_FLASH.ld
-    Jigu-GPIO.ioc
+    NUCLEO-L073RZ.ioc
 
   STM32L0538-DISCO/
     Core/
@@ -53,232 +74,286 @@ libscpi/
   Src/
 ```
 
-Application logic is shared under `App/`, while CubeMX-generated resources remain under each board directory.
+アプリケーションの処理は `App/` 以下で共通化し、CubeMXが生成するリソースは各ボードのディレクトリに配置しています。
 
 ---
 
-## SCPI Commands
+## SCPIコマンド
 
-| Commands | Value | Description |
+| コマンド | 値 | 説明 |
 |----------|-------|-------------|
-| SYSTem:LED | 0: Off / 1: On | Control onboard LED |
-| GPIO:SELect | 1 | Select GPIO channel |
-| GPIO:SELect? | - | Query selected GPIO |
-| GPIO:DIRection | IN / OUTPushpull / OUTOpendrain | Set GPIO direction |
-| GPIO:DIRection? | - | Query GPIO direction |
-| GPIO:LEVel | 0: Lo / 1: Hi | Set output level |
-| GPIO:LEVel? | - | Query output level |
-| GPIO:PULl | No / Down / Up | Configure pull resistor |
-| GPIO:PULl? | - | Query pull configuration |
-| GPIO:Speed | Low / Medium / High / Veryhigh | GPIO speed |
-| GPIO:Speed? | - | Query GPIO speed |
-| PWM:Frequency | 0 - 4294967295 | PWM frequency (Hz) |
-| PWM:Frequency? | - | Query frequency |
-| PWM:Width | 0 - 4294967295 | Pulse width (us) |
-| PWM:Width? | - | Query pulse width |
-| PWM:SYNC | 0: Stop on change / 1: Synchronous update | Select PWM setting update behavior |
-| PWM:SYNC? | - | Query synchronous update mode |
-| PWM:POLarity | 0: Active Low / 1: Active High | Output polarity |
-| PWM:POLarity? | - | Query polarity |
-| PWM:STart | 0: Stop / 1: Start | Start/Stop PWM output |
-| PWM:STart? | - | Query start state |
-| PWM:Count | 0 - 4294967295 | External pulse counter value |
-| PWM:Count? | - | Read current counter value |
-| PWM:Numbers | 0 - 4294967295 | Number of output pulses (0 = continuous) |
-| PWM:Numbers? | - | Query configured pulse count |
-| PWM:DEBUG? | - | Internal PWM debug information |
+| SYSTem:LED | 0: 消灯 / 1: 点灯 | オンボードLEDを制御 |
+| GPIO:SELect | 1 | GPIOチャンネルを選択 |
+| GPIO:SELect? | - | 選択中のGPIOを問い合わせ |
+| GPIO:DIRection | IN / OUTPushpull / OUTOpendrain | GPIOの入出力方向を設定 |
+| GPIO:DIRection? | - | GPIOの入出力方向を問い合わせ |
+| GPIO:LEVel | 0: Lo / 1: Hi | 出力レベルを設定 |
+| GPIO:LEVel? | - | 出力レベルを問い合わせ |
+| GPIO:PULl | No / Down / Up | プル抵抗を設定 |
+| GPIO:PULl? | - | プル抵抗の設定を問い合わせ |
+| GPIO:Speed | Low / Medium / High / Veryhigh | GPIOの速度を設定 |
+| GPIO:Speed? | - | GPIOの速度を問い合わせ |
+| PWM:Frequency | 0 - 4294967295 | PWM周波数（Hz）を設定 |
+| PWM:Frequency? | - | 周波数を問い合わせ |
+| PWM:Width | 0 - 4294967295 | パルス幅（us）を設定 |
+| PWM:Width? | - | パルス幅を問い合わせ |
+| PWM:SYNC | 0: 変更時に停止 / 1: 同期更新 | PWM設定の更新動作を選択 |
+| PWM:SYNC? | - | 同期更新モードを問い合わせ |
+| PWM:POLarity | 0: アクティブLow / 1: アクティブHigh | 出力極性を設定 |
+| PWM:POLarity? | - | 極性を問い合わせ |
+| PWM:STart | 0: 停止 / 1: 開始 | PWM出力を開始・停止 |
+| PWM:STart? | - | 開始状態を問い合わせ |
+| PWM:Counter | 0 - 4294967295 | 外部パルスカウンターの値を設定 |
+| PWM:Counter? | - | 現在のカウンター値を取得 |
+| PWM:Numbers | 0 - 4294967295 | 出力パルス数を設定（0 = 連続出力） |
+| PWM:Numbers? | - | 設定されたパルス数を問い合わせ |
+| PWM:DEBUG? | - | PWM内部のデバッグ情報を取得 |
 
 ---
 
-## PWM Behavior
+## PWMの動作
 
-### PWM Output
+### PWM出力
 
-- PWM output is generated by a hardware timer.
-- Pulse counting for stop control is handled by timer interrupts.
-- An independent, board-specific timer is used for external pulse counting.
+- ハードウェアタイマーでPWM出力を生成します。
+- 停止制御用のパルス数はタイマー割り込みでカウントします。
+- 外部パルスのカウントには、ボードごとに独立したタイマーを使用します。
 
 ### PWM:SYNC
 
-`PWM:SYNC` selects how frequency, pulse width, and polarity settings are handled.
-The power-on default is `0`.
+`PWM:SYNC` は、周波数・パルス幅・極性の設定を変更したときの動作を選択します。
+電源投入時の初期値は `0` です。
 
-| Value | Behavior |
+| 値 | 動作 |
 |---------|---------|
-| 0 | Frequency, width, or polarity changes stop PWM output (legacy behavior) |
-| 1 | Frequency and width changes are applied without stopping continuous output |
+| 0 | 周波数・パルス幅・極性を変更するとPWM出力を停止（従来の動作） |
+| 1 | 連続出力を停止せずに周波数・パルス幅の変更を反映 |
 
-With `PWM:SYNC 1`:
+`PWM:SYNC 1` の場合：
 
-- Accepted frequency and width settings are loaded together at the next PWM period boundary. The pulse currently being output is not truncated.
-- Each frequency or width command is validated against the other currently accepted setting. The controller is responsible for sending the settings in a valid order.
-- An invalid frequency/width combination is ignored and an `Execution error` is added to the existing SCPI error queue.
-- A polarity change while PWM is running is ignored and adds an `Execution error`. Polarity can be changed while PWM is stopped.
-- Frequency, width, and polarity changes during finite pulse output (`PWM:Numbers > 0`) are ignored and add an `Execution error`.
-- Rejected settings do not change the values returned by the corresponding query commands.
-- Changing `PWM:SYNC` itself does not stop or restart PWM output.
+- 受け付けた周波数とパルス幅を、次のPWM周期境界で同時に反映します。出力中のパルスは途中で切り詰めません。
+- 周波数またはパルス幅の各コマンドは、もう一方の受け付け済み設定値との組み合わせで検証します。制御側は、有効な組み合わせになる順序で設定を送信してください。
+- 周波数とパルス幅の組み合わせが無効な場合、設定を無視し、既存のSCPIエラーキューに `Execution error` を追加します。
+- PWM出力中の極性変更は無視し、`Execution error` を追加します。極性はPWM停止中に変更できます。
+- 有限パルス出力中（`PWM:Numbers > 0`）の周波数・パルス幅・極性の変更は無視し、`Execution error` を追加します。
+- 拒否した設定は、対応する問い合わせコマンドの返値に反映しません。
+- `PWM:SYNC` 自体の変更では、PWM出力を停止・再開しません。
 
-Use `SYSTem:ERRor?` to read errors caused by rejected settings.
+拒否された設定によるエラーは、`SYSTem:ERRor?` で確認できます。
 
 ### PWM:POLarity
 
-| Value | Description |
+| 値 | 説明 |
 |---------|---------|
-| 0 | Active Low |
-| 1 | Active High |
+| 0 | アクティブLow |
+| 1 | アクティブHigh |
 
-For Active Low operation, the inactive state is High.
+アクティブLowでは非アクティブ時のレベルはHigh、アクティブHighではLowです。
 
-Example:
-
-```text
-PWM:POLarity 0
-PWM:Numbers 3
-```
-
-Expected waveform:
+以下は `PWM:Numbers 3` のとき、パルス生成開始後に端子から出力するレベルだけを描いた図です。開始前のレベルは省略しています。パルス幅と周期の比率は説明用です。
 
 ```text
-Hi -> Lo -> Hi -> Lo -> Hi -> Lo -> Hi
+pol=0 / n=3（アクティブLow）
+
+Hi       ┌────────┐      ┌────────┐      ┌────────────
+         │        │      │        │      │
+Lo ──────┘        └──────┘        └──────┘
+   開始                                  以後Hi保持
+
+
+pol=1 / n=3（アクティブHigh）
+
+Hi ──────┐        ┌──────┐        ┌──────┐
+         │        │      │        │      │
+Lo       └────────┘      └────────┘      └────────────
+   開始                                  以後Lo保持
 ```
 
-The final High level is part of the normal PWM waveform and is not considered a glitch.
+最初のパルスは、`PWM:POLarity 0` ではLow、`PWM:POLarity 1` ではHighです。3発目のパルス終了後は非アクティブレベルを保持し、4発目は出力しません。最後に非アクティブレベルへ戻る遷移は正常な波形の一部であり、グリッチではありません。
 
-Note: On STM32L053R8/TIM21 and STM32L073RZ/TIM21, advanced timer idle-state control is not available, so Active Low stop waveform may differ from STM32L432KC/TIM1.
+停止時は、共通ポート実装が設定されたPWM端子をGPIO出力に切り替え、非アクティブレベル（アクティブLowならHigh、アクティブHighならLow）を保持します。次回の開始時は、GPIOでそのレベルを保持したまま、実際に使用するCCRとプリロードCCRをともに0にしてタイマー出力を有効化し、その後にオルタネートファンクションモードへ切り替えます。指定されたパルス幅は、この切り替えが完了してから、同期したUGイベントで反映します。これにより、TIM21にはない高機能タイマーのアイドル状態機能にも依存しません。
 
-### Pulse Count Control (PWM:Numbers)
+### パルス数制御（PWM:Numbers）
 
 - `PWM:Numbers = 0`
-  - Continuous output
+  - 連続出力します。
 
 - `PWM:Numbers >= 1`
-  - Output stops after the specified number of pulses
-  - The following PWM period is suppressed in hardware, so interrupt latency does not create a short extra pulse
-  - Repeated starts reload the configured pulse width before output begins
-  - The output channel and update interrupt are armed before the timer starts, preserving the first pulse width and period
-  - Actual pulse count can be verified using the board-specific external counter
+  - 指定した数のパルスを出力して停止します。
+  - `PWM:Numbers 1` は、全ボード共通の最初の比較一致で停止する処理により、正確に1発を出力します。従来、境界条件で2発出力される動作は修正済みです。
+  - 次のPWM周期のパルスをハードウェアで抑止するため、割り込みの遅延による短い余分なパルスを防ぎます。
+  - 繰り返し開始する場合も、出力開始前に設定されたパルス幅を再ロードします。
+  - 出力チャンネルは、まず非アクティブ状態のシャドーCCRで開始します。その後、共通のUGイベントでタイマーのリセットと実際のパルス幅のロードを同時に行い、HALによる出力有効化の遅延が最初のパルス幅に影響しないようにします。
+  - 初期化時のソフトウェア更新イベントは周期数に含めません。開始関数から戻る前に単発パルスが終了しても、比較一致フラグを保持します。
+  - 実際のパルス数は、各ボードの外部カウンターで確認できます。
 
 ---
 
-## Hardware
+## ハードウェア
+
+### NUCLEO-F303K8
+
+| ボード上の表記・コネクター | MCU端子 | ファームウェアの機能 |
+|-----|-----|----------|
+| D9 / CN3 12番端子 | PA8 (FT) | トリガー／PWM出力（TIM1_CH1）、3.3 V出力 |
+| D11 / CN3 14番端子 | PB5 (FT) | 外部パルスカウンター（TIM3_CH2）、ソフトウェアで32ビットに拡張 |
+| D2 / CN3 5番端子 | PA12 (FT) | GPIO1 |
+| D13 / CN4 15番端子 | PB3 | オンボードLED（LD3）、`SYSTem:LED` の機能を復元済み |
+| ST-LINK VCP（SB2開放時はA7） | PA2 | USART2 TX |
+| ST-LINK VCP（Nanoヘッダーには未接続） | PA15 | USART2 RX |
+| GND / CN3 4番端子またはCN4 2番端子 | GND | 信号グラウンド |
+
+- トリガー先またはオシロスコープを **D9（PA8）** と **GND** に接続してください。
+- `PWM:Counter?` で出力数を確認する場合は、**D9（PA8）とD11（PB5）をジャンパー接続**してください。`PWM:Numbers` による有限パルス出力はPWMタイマー内部の割り込みを使用するため、このジャンパーは外部でパルスを計測する場合だけ必要です。
+- **SB15は接続したままで使用できます**。D13/PB3はLED出力に戻しており、カウンター入力には使用しません。
+- D11/PB5とD2/PA12は5 V耐性のあるデジタル入力です。外部から5 V信号を入力する際は、ボードに給電し、GPIO入力モード・プル抵抗なしで使用してください。プッシュプル出力は3.3 Vです。以前使用していたA1/PA1とA5/PA6は、これらの機能では使用しません。
+- TIM3の16ビットカウンターを更新割り込みで符号なし32ビットに拡張しています（0～4,294,967,295、その後0に戻ります）。読み取り時は未処理のオーバーフローも反映し、書き込み・リセット時は上位・下位の両方を更新します。停止・開始をまたいでカウント値を保持します。入力65,536パルスごとに少なくとも1回は割り込み処理が必要です。割り込みが処理できない間に複数回オーバーフローした場合は復元できません。実機で信頼性を確保できる最大入力レートは未測定です。
+- ST-LINK USB仮想COMで制御します。通信条件は **115200 baud、8N1、フロー制御なし**、コマンドの終端はLFです。VCPはD1/D0ではなく、PA2/PA15とSB2/SB3を使用します。
+- F303は内部クロックHSI/2 ×16 = **64 MHz** を使用するため、外部クロックやクロック用はんだブリッジの変更は不要です。タイミング精度は内部RC発振器に依存します。COM16とD9–D11のループバック試験で、有限パルス出力・単発出力・32ビットカウントを確認済みです。両極性について、単発および3発の出力開始時に、最初のパルス幅1～500 usをタイマークロックに対して確認しました。独立した測定器による周波数とパルス幅の絶対精度は未測定です。
+
+参考資料：[ST DS9866：端子機能とタイマー機能](https://www.st.com/resource/en/datasheet/stm32f303k8.pdf)、[ST UM1956：表12とはんだブリッジ](https://www.st.com/resource/en/user_manual/dm00231744-stm32-nucleo32-boards-mb1180-stmicroelectronics.pdf)。
+実装と検証の詳細は [F303ボードのREADME](Boards/NUCLEO-F303K8/README.md) を参照してください。
 
 ### NUCLEO-L432KC
 
-| Pin | Function |
+| 端子 | 機能 |
 |-----|----------|
-| PA8 (D9) | PWM Out (TIM1_CH1) |
+| PA8 (D9) | PWM出力（TIM1_CH1） |
 | PA6 (A5) | GPIO1 |
-| PA1 (A1) | PWM In / Counter (TIM2_CH2) |
+| PA1 (A1) | PWM入力／カウンター（TIM2_CH2） |
 
 ### NUCLEO-L053R8
 
-| Pin | Function |
+| 端子 | 機能 |
 |-----|----------|
-| PB14 | PWM Out (TIM21_CH2) |
+| PB14 | PWM出力（TIM21_CH2） |
 | PA6 | GPIO1 |
-| PA1 | PWM In / Counter (TIM2_CH2) |
+| PA1 | PWM入力／カウンター（TIM2_CH2） |
 
 ### NUCLEO-L073RZ
 
-| Pin | Function |
+| 端子 | 機能 |
 |-----|----------|
-| PB14 | PWM Out (TIM21_CH2) |
+| PB14 | PWM出力（TIM21_CH2） |
 | PA6 | GPIO1 |
-| PA1 | PWM In / Counter (TIM2_CH2) |
-| PA2 | UART TX (USART2 / ST-LINK VCP) |
-| PA3 | UART RX (USART2 / ST-LINK VCP) |
+| PA1 | PWM入力／カウンター（TIM2_CH2） |
+| PA2 | UART送信（USART2 / ST-LINK VCP） |
+| PA3 | UART受信（USART2 / ST-LINK VCP） |
 
 ### STM32L0538-DISCO
 
-| Pin | Function |
+| 端子 | 機能 |
 |-----|----------|
-| PB14 | PWM Out (TIM21_CH2) |
+| PB14 | PWM出力（TIM21_CH2） |
 | PB12 | GPIO1 |
-| PA7 | PWM In / Counter (TIM22_CH2) |
-| PA9 | UART TX (USART1) |
-| PA10 | UART RX (USART1) |
+| PA7 | PWM入力／カウンター（TIM22_CH2） |
+| PA9 | UART送信（USART1） |
+| PA10 | UART受信（USART1） |
 
-GPIO1, PWM output, and external counter pins are selected from 5 V-tolerant pins.
+更新したF303K8では、PWM出力・外部カウンター・GPIO1にFT端子を使用しています。既存ボードについては、以下の端子確認結果を参照してください。5 V入力への耐性は、出力レベルが5 Vであることを意味しません。
 
-PA7 is also connected to the Discovery board touch-sensing circuit. Open SB25 when PA7 is used as the external counter input so that the touch circuit is isolated.
+DiscoveryボードのPA7はタッチ検出回路にも接続されています。PA7を外部カウンター入力に使用する場合は、SB25を開放してタッチ回路を切り離してください。
 
 ---
 
-## Build Configuration
+### 既存ボードの端子確認結果（2026-11-19、設定変更なし）
 
-Recommended compiler optimization settings:
+| ボード | PWM出力 | カウンター入力 | 実行コード上のGPIO1 | MCUの入力構造 |
+|---|---|---|---|---|
+| NUCLEO-L432KC | PA8 (FT) | PA1 (FT_a) | PA6 (FT_a) | 3端子とも、必要な動作条件を満たせば5 Vデジタル入力に対応 |
+| NUCLEO-L053R8 | PB14 (FTf) | PA1 (FT) | PA6 (FT) | 3端子とも5 V耐性あり |
+| NUCLEO-L073RZ | PB14 (FTf) | PA1 (FT) | PA6 (FT) | 3端子とも5 V耐性あり |
+| STM32L0538-DISCO | PB14 (FTf) | PA7 (FT) | PA6 (FT)。資料・設定定義ではPB12 (FT) | PA6とPB12はいずれも5 V耐性あり。ただしGPIO1の割り当てに不一致あり |
 
-| Configuration | Optimization |
+この確認は、使用するMCU端子を対象としたものであり、ボード上の外部回路の5 V対応を保証するものではありません。
+VDDを超える電圧を加える場合は、デジタル入力またはオルタネートファンクション入力モードを使用し、アナログ接続を無効にして、内部プル抵抗を使用しないでください。プッシュプル出力は3.3 Vです。
+Discoveryの `App/Inc/board_config.h` ではGPIO1をPB12と定義していますが、`App/Inc/gpio.h` と `App/Src/gpio.c` では、既存ボードに対して現在PA6を使用しています。この不一致は報告のみで、Discoveryの設定は変更していません。PA7のカウンター入力には、前述のとおりSB25の開放も必要です。
+この確認結果は、すべてのUART端子に5 V耐性があることを意味しません。L432KCのUSART2 RXに使うPA3はTT_aで、5 V耐性はありません。
+
+出典：[L432KC DS11451：端子定義](https://www.st.com/resource/en/datasheet/stm32l432kc.pdf)、[L053R8/C8 DS10152：表15](https://www.st.com/resource/en/datasheet/stm32l053r8.pdf)、[L073RZ DS10685：表16](https://www.st.com/resource/en/datasheet/stm32l073rz.pdf)。
+
+## ビルド設定
+
+コンパイラーの推奨最適化設定は次のとおりです。
+
+| 構成 | 最適化 |
 |---|---|
 | Debug | `-Og` |
 | Release | `-Os` |
 
-Notes:
+補足：
 
-- `-Og` provides a good balance between code size and debugging capability.
-- STM32L053R8 has 64 KB Flash memory.
-- STM32L073RZ has 192 KB Flash and 20 KB RAM.
-- Debug builds using `-O0` may exceed available Flash size.
+- `-Og` はコードサイズとデバッグのしやすさのバランスがよい設定です。
+- STM32L053R8のFlashメモリーは64 KBです。
+- STM32L073RZのFlashメモリーは192 KB、RAMは20 KBです。
+- `-O0` を使用したDebugビルドでは、Flash容量を超える場合があります。
 
 ---
 
-## Connection
+## 接続
+
+### NUCLEO-F303K8
+
+```text
+D9 / PA8（PWM出力）-> D11 / PB5（カウンター入力）、SB15は変更不要
+D2 / PA12 = GPIO1
+```
 
 ### NUCLEO-L432KC
 
 ```text
-PA8 (PWM Out) -> PA1 (Counter In)
+PA8（PWM出力）-> PA1（カウンター入力）
 ```
 
 ### NUCLEO-L053R8
 
 ```text
-PB14 (PWM Out) -> PA1 (Counter In)
+PB14（PWM出力）-> PA1（カウンター入力）
 ```
 
 ### NUCLEO-L073RZ
 
 ```text
-PB14 (PWM Out) -> PA1 (Counter In)
+PB14（PWM出力）-> PA1（カウンター入力）
 ```
 
 ### STM32L0538-DISCO
 
 ```text
-PB14 (PWM Out) -> PA7 (Counter In)
+PB14（PWM出力）-> PA7（カウンター入力）
 ```
 
-Open SB25 before using PA7 as the counter input.
+PA7をカウンター入力に使用する前に、SB25を開放してください。
 
 ---
 
-## Board Selection
+## ボードの選択
 
-`App/Inc/board_config.h` contains the shared board-dependent timer, UART, and GPIO definitions.
+`App/Inc/board_config.h` に、ボードごとに異なるタイマー・UART・GPIOの定義をまとめています。
 
-| Board | MCU definition | Board definition | UART | Counter |
+| ボード | MCU定義 | ボード定義 | UART | カウンター |
 |-------|----------------|------------------|------|---------|
-| NUCLEO-L432KC | `STM32L432xx` | Not required | USART2 (`huart2`) | TIM2 (`htim2`) |
+| NUCLEO-L432KC | `STM32L432xx` | 不要 | USART2 (`huart2`) | TIM2 (`htim2`) |
 | NUCLEO-L053R8 | `STM32L053xx` | `BOARD_NUCLEO_L053R8` | USART2 (`huart2`) | TIM2 (`htim2`) |
 | NUCLEO-L073RZ | `STM32L073xx` | `BOARD_NUCLEO_L073RZ` | USART2 (`huart2`) | TIM2 (`htim2`) |
 | STM32L0538-DISCO | `STM32L053xx` | `BOARD_STM32L0538_DISCO` | USART1 (`huart1`) | TIM22 (`htim22`) |
 
-The two STM32L053 boards use the same MCU family definition, so a board definition is required to distinguish their UART, GPIO, and counter instances. Define the selected board symbol for both Debug and Release configurations in STM32CubeIDE. NUCLEO-L073RZ also requires its board symbol; the supplied project defines it in both configurations.
+2種類のSTM32L053ボードは同じMCUファミリー定義を使用するため、UART・GPIO・カウンターのインスタンスを区別するボード定義が必要です。STM32CubeIDEのDebugとReleaseの両構成に、使用するボードのシンボルを定義してください。NUCLEO-L073RZにもボードシンボルが必要で、付属のプロジェクトでは両構成に定義済みです。
 
 ---
 
-## libscpi Build Policy
+## libscpiのビルド方針
 
-This project currently builds **libscpi from source**.
+現在、このプロジェクトでは **libscpiをソースからビルド**しています。
 
-The libscpi source files are included in the STM32CubeIDE build so that each board configuration is compiled with the correct target options.
+libscpiのソースファイルをSTM32CubeIDEのビルド対象に含めることで、各ボードの構成に適したターゲットオプションでコンパイルします。
 
-This avoids ABI mismatch issues between different STM32 targets, for example:
+これにより、たとえば次のようなSTM32ターゲット間のABI不一致を避けます。
 
 - STM32L432KC: Cortex-M4F / hard-float
 - STM32L053R8: Cortex-M0+ / soft-float
 
-When migrating from a static archive build to a source build, the following files were removed because STM32CubeMX already provides equivalent implementations:
+静的アーカイブを使用するビルドからソースビルドに移行する際、STM32CubeMXが同等の実装を提供しているため、以下のファイルを削除しました。
 
 ```text
 libscpi/Src/syscalls.c
@@ -287,54 +362,55 @@ libscpi/Src/sysmem.c
 
 ---
 
-## STM32CubeMX Regeneration
+## STM32CubeMXによる再生成
 
-When STM32CubeMX regenerates code, linked folders such as `App` and `libscpi` may be removed from the STM32CubeIDE project.
+STM32CubeMXでコードを再生成すると、`App` や `libscpi` などのリンクフォルダーがSTM32CubeIDEプロジェクトから削除される場合があります。
 
-Before building, verify `Properties > Resource > Location` points to the board project under the current repository, for example:
+ビルド前に、`Properties > Resource > Location` が現在のリポジトリ内のボードプロジェクトを指していることを確認してください。例：
 
 ```text
 X:\Tools\__Jigu-GPIO\Boards\NUCLEO_L053R8
 ```
 
-Do not mix a board project from one repository location with linked `App` or `libscpi` folders from another location. Relative include paths may otherwise select stale headers.
+異なる場所にあるリポジトリのボードプロジェクトと、別の場所の `App`・`libscpi` リンクフォルダーを混在させないでください。相対インクルードパスにより、古いヘッダーが選ばれる可能性があります。
 
-### Recovery Procedure
+### 復旧手順
 
-1. Regenerate code using STM32CubeMX.
-2. Drag and drop the following folders from Windows Explorer into the STM32CubeIDE Project Explorer:
+1. STM32CubeMXでコードを再生成します。
+2. Windowsエクスプローラーから、次のフォルダーをSTM32CubeIDEのProject Explorerへドラッグ＆ドロップします。
 
    * `App`
    * `libscpi`
-3. Select:
 
-```text
-Link to files and folders
-```
+3. 次の項目を選択します。
 
-4. Restore build participation for newly added files and folders if necessary:
+   ```text
+   Link to files and folders
+   ```
 
-   * Right click the file or folder
-   * Resource Configurations
-   * Exclude from Build...
-   * Clear the checkboxes for Debug and Release
+4. 必要に応じて、追加したファイル・フォルダーをビルド対象に戻します。
 
-5. Run:
+   * ファイルまたはフォルダーを右クリックします。
+   * 「Resource Configurations」を選択します。
+   * 「Exclude from Build...」を選択します。
+   * DebugとReleaseのチェックを外します。
 
-```text
-Project -> Clean...
-Build Project
-```
+5. 次の操作を実行します。
+
+   ```text
+   Project -> Clean...
+   Build Project
+   ```
 
 ---
 
-## link archive
+## 静的アーカイブのリンク
 
-The following is a reference example for building libscpi as a static archive instead of source-building it in STM32CubeIDE.
+以下は、STM32CubeIDEでソースからビルドする代わりに、libscpiを静的アーカイブとしてビルドする場合の参考例です。
 
 https://github.com/j123b567/scpi-parser/releases/tag/v2.2
 
-### Example: NUCLEO-L432KC / Cortex-M4F hard-float
+### 例：NUCLEO-L432KC / Cortex-M4F hard-float
 
 ```bash
 make static \
@@ -350,7 +426,7 @@ cp ./scpi-parser/libscpi/dist/libscpi.a \
    ./Jigu-GPIO/libscpi/dist/l432/libscpi.a
 ```
 
-### Example: NUCLEO-L053R8 / Cortex-M0+ soft-float
+### 例：NUCLEO-L053R8 / Cortex-M0+ soft-float
 
 ```bash
 make static \
@@ -366,4 +442,4 @@ cp ./scpi-parser/libscpi/dist/libscpi.a \
    ./Jigu-GPIO/libscpi/dist/l053/libscpi.a
 ```
 
-Do not reuse a hard-float Cortex-M4F archive for Cortex-M0+ targets.
+hard-floatのCortex-M4F用アーカイブを、Cortex-M0+ターゲットに流用しないでください。

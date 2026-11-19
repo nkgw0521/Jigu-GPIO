@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-19",
+  "source_commit": "8ab73719f111eeceec7e110f8a5b703b412eefcc",
+  "compiler": "arm-none-eabi-gcc.exe (GNU Tools for STM32 14.3.rel1.20251027-0700) 14.3.1 20250623",
+  "build": "Release; make -B all in isolated copies with current repository App/libscpi/board sources; GNU objcopy -O binary on generated ELF; exact byte comparison of published BIN",
+  "binaries": [
+    {
+      "board": "NUCLEO-F303K8",
+      "path": "Boards/NUCLEO-F303K8/Release/NUCLEO-F303K8.bin",
+      "bytes": 42700,
+      "sha256": "d2f7cf2826ddaf8e8bfa9abf087d580d25efb6e6cc791239eb52740e75c38673",
+      "full_release_rebuild": "passed",
+      "elf_binary_comparison": "identical",
+      "linker_warning": null
+    },
+    {
+      "board": "NUCLEO-L073RZ",
+      "path": "Boards/NUCLEO-L073RZ/Release/NUCLEO-L073RZ.bin",
+      "bytes": 49916,
+      "sha256": "6df1e06d4aeff7129005f85cad4c50e723128544f9ea1000184db5886d548d9e",
+      "full_release_rebuild": "passed",
+      "elf_binary_comparison": "identical",
+      "linker_warning": null,
+      "cubeide_auto_bin_verification": {
+        "date": "2026-11-19",
+        "method": "STM32CubeIDE 2.1.1 headless import into a fresh workspace and Release build; no manual objcopy step",
+        "result": "0 errors, 0 warnings; BIN automatically generated and byte-identical to published BIN",
+        "option": "Convert to binary file (-O binary)",
+        "configuration": "Release"
+      }
+    },
+    {
+      "board": "NUCLEO_L053R8",
+      "path": "Boards/NUCLEO_L053R8/Release/Jigu-GPIO_L053.bin",
+      "bytes": 49804,
+      "sha256": "263270d94e9da6bd314c87dab75383da7b798f39c89d05be233b56f107faa523",
+      "full_release_rebuild": "passed",
+      "elf_binary_comparison": "identical",
+      "linker_warning": "RWX LOAD segment"
+    },
+    {
+      "board": "NUCLEO_L432KC",
+      "path": "Boards/NUCLEO_L432KC/Release/Jigu-GPIO_L432.bin",
+      "bytes": 44196,
+      "sha256": "dfc882bbf9cce0a8494f161ce19bf46c78b66b67aef2ceb5cbc931dcbd65a5cc",
+      "full_release_rebuild": "passed",
+      "elf_binary_comparison": "identical",
+      "linker_warning": "RWX LOAD segment"
+    },
+    {
+      "board": "STM32L0538-DISCO",
+      "path": "Boards/STM32L0538-DISCO/Release/Jigu-GPIO.bin",
+      "bytes": 51580,
+      "sha256": "81d23170bff163c18639d41162d13f66a16a74004e71af9305cca934713ab35f",
+      "full_release_rebuild": "passed",
+      "elf_binary_comparison": "identical",
+      "linker_warning": "RWX LOAD segment"
+    }
+  ]
+}

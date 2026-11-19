@@ -53,7 +53,7 @@ dkms.confbuild/
 build/
 
 Boards/*/Release/*
-!Boards/*/Release/Jigu-GPIO.bin
+!Boards/*/Release/*.bin
 
 Boards/*/Debug/*
 

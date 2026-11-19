@@ -1,0 +1,85 @@
+{
+  "Method": "production firmware; hardware breakpoints with TIM2/TIM21 frozen during halts; validates states/order, not analog glitch bandwidth",
+  "Results": [
+    {
+      "Polarity": 0,
+      "Stage": "before timer enable (GPIO)",
+      "PC": "pc (/32): 0x080030de",
+      "Mode": 1,
+      "PB14": 1,
+      "PA1": 1,
+      "CC2E": 0,
+      "Counter": 0
+    },
+    {
+      "Polarity": 0,
+      "Stage": "after timer enable (GPIO)",
+      "PC": "pc (/32): 0x080030e2",
+      "Mode": 1,
+      "PB14": 1,
+      "PA1": 1,
+      "CC2E": 1,
+      "Counter": 0
+    },
+    {
+      "Polarity": 0,
+      "Stage": "after GPIO-to-AF",
+      "PC": "pc (/32): 0x080030f8",
+      "Mode": 2,
+      "PB14": 1,
+      "PA1": 1,
+      "CC2E": 1,
+      "Counter": 0
+    },
+    {
+      "Polarity": 0,
+      "Stage": "before real launch UG",
+      "PC": "pc (/32): 0x08003102",
+      "Mode": 2,
+      "PB14": 1,
+      "PA1": 1,
+      "CC2E": 1,
+      "Counter": 0
+    },
+    {
+      "Polarity": 1,
+      "Stage": "before timer enable (GPIO)",
+      "PC": "pc (/32): 0x080030de",
+      "Mode": 1,
+      "PB14": 0,
+      "PA1": 0,
+      "CC2E": 0,
+      "Counter": 0
+    },
+    {
+      "Polarity": 1,
+      "Stage": "after timer enable (GPIO)",
+      "PC": "pc (/32): 0x080030e2",
+      "Mode": 1,
+      "PB14": 0,
+      "PA1": 0,
+      "CC2E": 1,
+      "Counter": 0
+    },
+    {
+      "Polarity": 1,
+      "Stage": "after GPIO-to-AF",
+      "PC": "pc (/32): 0x080030f8",
+      "Mode": 2,
+      "PB14": 0,
+      "PA1": 0,
+      "CC2E": 1,
+      "Counter": 0
+    },
+    {
+      "Polarity": 1,
+      "Stage": "before real launch UG",
+      "PC": "pc (/32): 0x08003102",
+      "Mode": 2,
+      "PB14": 0,
+      "PA1": 0,
+      "CC2E": 1,
+      "Counter": 0
+    }
+  ]
+}

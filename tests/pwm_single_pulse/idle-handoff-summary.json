@@ -1,0 +1,42 @@
+{
+  "Date": "2026-11-19",
+  "CommonSourceSHA256": "156b7747a354b5bb088a6f8c5124401598324d941b50e265fecca48ac3236d7e",
+  "ProductionFirmwareRestoredAndVerified": true,
+  "SerialPortsClosed": true,
+  "AnalogScopeVerification": false,
+  "Boards": {
+    "NUCLEO-L053R8": {
+      "CountCases": 200,
+      "WidthCaptures": 132,
+      "FinalProductionChecks": 10,
+      "WidthErrorTicks": [
+        -2,
+        -1,
+        1
+      ],
+      "AllPassed": true
+    },
+    "NUCLEO-F303K8": {
+      "CountCases": 208,
+      "WidthCaptures": 132,
+      "FinalProductionChecks": 10,
+      "WidthErrorTicks": [
+        0
+      ],
+      "AllPassed": true
+    }
+  },
+  "L053ActiveHighBaselineComparison": {
+    "Cases": 66,
+    "OldErrorTicks": [
+      -2,
+      -1
+    ],
+    "NewErrorTicks": [
+      -2,
+      -1
+    ],
+    "MaxPairedDifferenceTicks": 1,
+    "Conclusion": "same nominal-width offsets before and after; paired variation at most one 32 MHz capture tick"
+  }
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "board": "NUCLEO_L432KC",
+    "debug": false,
+    "scpi_preprocessed_equal": true,
+    "sha256": "5c6c61fccb68f49695df6249f366311a25ca326ea56ceadf9839ae5a3f31f50a"
+  },
+  {
+    "board": "NUCLEO_L432KC",
+    "debug": true,
+    "scpi_preprocessed_equal": true,
+    "sha256": "d9702e4daaafb2251bd201d43a2f8a0c8d028610e6822661685f2d298fb17f43"
+  },
+  {
+    "board": "NUCLEO_L053R8",
+    "debug": false,
+    "scpi_preprocessed_equal": true,
+    "sha256": "b98581f98c3641c0d897ae352c0d0b1def15a520c0c85316e83f7ed079d1d9b7"
+  },
+  {
+    "board": "NUCLEO_L053R8",
+    "debug": true,
+    "scpi_preprocessed_equal": true,
+    "sha256": "b9b633f727d8550c222e917294b8a532a80cf1401920eddd551af45febd81848"
+  },
+  {
+    "board": "NUCLEO-L073RZ",
+    "debug": false,
+    "scpi_preprocessed_equal": true,
+    "sha256": "575a58bbdfd04fdc2e1922c62bf6e8e3a8dd53bc56f52d5fefc0a13ecacf8934"
+  },
+  {
+    "board": "NUCLEO-L073RZ",
+    "debug": true,
+    "scpi_preprocessed_equal": true,
+    "sha256": "15d8a865aeeec2c60876d3ca89ba5bfc78176078a51cb0548c9704b4be6d7480"
+  },
+  {
+    "board": "STM32L0538-DISCO",
+    "debug": false,
+    "scpi_preprocessed_equal": true,
+    "sha256": "8b7827c6430cec98201ec6e99738a143e3f3bf1c8828c4b287380044badcb3d9"
+  },
+  {
+    "board": "STM32L0538-DISCO",
+    "debug": true,
+    "scpi_preprocessed_equal": true,
+    "sha256": "e33859724fc255a8efb08cbe54cfa31203aabfc7e632160e7486fe21b65af7f6"
+  }
+]

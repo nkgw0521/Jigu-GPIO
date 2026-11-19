@@ -56,7 +56,7 @@ void pwm_generator_set_numbers(uint32_t numbers)
      * of the final pulse.
      *
      * numbers == 0 : continuous output
-     * numbers == 1 : boundary case, kept as-is
+     * numbers == 1 : compare stop is armed before the first period starts
      */
     if (numbers > 1U) {
         g_pwm_numbers = numbers - 1U;
@@ -108,10 +108,19 @@ bool pwm_generator_start(const pwm_generator_config_t *cfg)
 
     pwm_generator_set_numbers(cfg->numbers);
     pwm_generator_reset_shot_count();
+    pwm_port_set_single_pulse(cfg->numbers == 1U);
+    if (cfg->numbers == 1U) {
+        /* Arm the first compare before enabling the board PWM timer. */
+        g_pwm_waiting_cc_stop = true;
+        g_pwm_stop_pending = true;
+    }
     pwm_generator_set_running(true);
+    /* A short pulse may complete in the start routine's IRQ-unmask path. */
+    pwm_start_state_set(true);
 
     if (!pwm_port_start_output()) {
         pwm_generator_set_running(false);
+        pwm_start_state_set(false);
         return false;
     }
 

@@ -26,6 +26,7 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
 bool pwm_port_validate_output(uint32_t freq_hz, uint32_t width_us);
 bool pwm_port_update_output_sync(uint32_t freq_hz, uint32_t width_us);
 bool pwm_port_start_output(void);
+void pwm_port_set_single_pulse(bool enabled);
 void pwm_port_stop_all(void);
 void pwm_port_stop_output_from_isr(void);
 void pwm_port_suppress_next_pulse(void);
