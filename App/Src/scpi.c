@@ -728,6 +728,7 @@ SCPI_PwmPolarity( scpi_t * context )
 			{
 				SCPI_PwmReset();
 			}
+			pwm_generator_set_idle_polarity(pwm_param.polarity);
 		}
 }
 	return result ;

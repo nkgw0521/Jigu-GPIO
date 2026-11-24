@@ -127,6 +127,11 @@ bool pwm_generator_start(const pwm_generator_config_t *cfg)
     return true;
 }
 
+void pwm_generator_set_idle_polarity(uint32_t polarity)
+{
+    pwm_port_set_idle_polarity(polarity);
+}
+
 void pwm_generator_stop(void)
 {
     pwm_port_stop_all();

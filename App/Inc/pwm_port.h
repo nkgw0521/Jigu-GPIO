@@ -23,6 +23,8 @@ typedef struct {
 } pwm_port_snapshot_t;
 
 bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t polarity);
+/* Apply polarity to the pin while PWM output is stopped. */
+void pwm_port_set_idle_polarity(uint32_t polarity);
 bool pwm_port_validate_output(uint32_t freq_hz, uint32_t width_us);
 bool pwm_port_update_output_sync(uint32_t freq_hz, uint32_t width_us);
 bool pwm_port_start_output(void);

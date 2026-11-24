@@ -77,6 +77,14 @@ int main(void)
   pwm_generator_config_t continuous={1000,100,pol,0};
   assert(pwm_generator_start(&continuous));assert(run_pulses(5)==5);assert(pwm_generator_is_running());
   pwm_generator_stop();assert(!pwm_generator_is_running());assert(run_pulses(3)==0);
+
+  uint32_t count_before = pwm_port_counter_get();
+  pwm_generator_set_idle_polarity(!pol);
+  assert(((mock_gpio.MODER >> (TEST_PIN * 2)) & 3U) == 1U);
+  assert(!!(mock_gpio.ODR & PWM_OUTPUT_GPIO_PIN) == pol);
+  assert(!pwm_generator_is_running());
+  assert(run_pulses(3) == 0);
+  assert(pwm_port_counter_get() == count_before);
  }
  /* Preserve callers that already disabled interrupts and clean up failed starts. */
  pwm_generator_config_t one={1000,1,1,1};

@@ -36,6 +36,8 @@ typedef struct {
 
 bool pwm_generator_start(const pwm_generator_config_t *cfg);
 void pwm_generator_stop(void);
+/* Apply polarity to the pin while PWM output is stopped. */
+void pwm_generator_set_idle_polarity(uint32_t polarity);
 bool pwm_generator_validate_output(uint32_t freq_hz, uint32_t width_us);
 bool pwm_generator_update_output_sync(uint32_t freq_hz, uint32_t width_us);
 

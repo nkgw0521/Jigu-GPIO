@@ -45,6 +45,16 @@ static void pwm_port_hold_idle(void)
     MODIFY_REG(PWM_OUTPUT_GPIO_PORT->MODER, 3UL << shift, 1UL << shift);
 }
 
+void pwm_port_set_idle_polarity(uint32_t polarity)
+{
+    pwm_idle_level = (polarity == 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    /* Hold inactive through the brief GPIO-to-AF handoff at start. */
+    uint32_t mode_shift = pwm_port_output_mode_shift();
+    MODIFY_REG(PWM_OUTPUT_GPIO_PORT->PUPDR, 3UL << mode_shift,
+               ((polarity == 0U) ? GPIO_PULLUP : GPIO_PULLDOWN) << mode_shift);
+    pwm_port_hold_idle();
+}
+
 static uint32_t pwm_port_get_timer_clk_hz(void)
 {
     uint32_t pclk = PWM_TIMER_PCLK_FREQ();
@@ -178,12 +188,7 @@ bool pwm_port_configure_output(uint32_t freq_hz, uint32_t width_us, uint32_t pol
         return false;
     }
 
-    pwm_idle_level = (polarity == 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-    /* Hold inactive through the brief GPIO-to-AF handoff at start. */
-    uint32_t mode_shift = pwm_port_output_mode_shift();
-    MODIFY_REG(PWM_OUTPUT_GPIO_PORT->PUPDR, 3UL << mode_shift,
-               ((polarity == 0U) ? GPIO_PULLUP : GPIO_PULLDOWN) << mode_shift);
-    pwm_port_hold_idle();
+    pwm_port_set_idle_polarity(polarity);
 
     PWM_TIMER_HANDLE.Init.Prescaler = values.psc;
     PWM_TIMER_HANDLE.Init.Period = values.arr;
