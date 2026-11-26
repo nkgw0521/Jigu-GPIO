@@ -26,7 +26,8 @@
 #define SCPI_IDN1 "MANUFACTURE"
 #define SCPI_IDN2 "INSTR2013"
 #define SCPI_IDN3 NULL
-#define SCPI_IDN4 "01-02"
+#define JIGU_GPIO_FW_VERSION "01-04"
+#define SCPI_IDN4 JIGU_GPIO_FW_VERSION
 
 
 /************************************************************************/

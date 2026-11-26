@@ -16,6 +16,8 @@ STM32 NucleoおよびDiscoveryボード向けの、SCPIで制御するGPIO・PWM
 
 ## Releaseファームウェアのバイナリ
 
+実機に書き込んだFWの版番号は `*IDN?` の応答の第4フィールドで確認できます。応答の形式は `MANUFACTURE,INSTR2013,0,NN-NN` です。版番号は全ボード共通で、現行リリースの版番号はマニフェストに記録しています。
+
 全対応ボードの現行ReleaseバイナリをGitで管理しています。ファイル名は現在のビルド成果物名に合わせています。L432の旧ファイル `Jigu-GPIO.bin` は `Jigu-GPIO_L432.bin` に置き換えました。
 
 | ボードフォルダー | Releaseバイナリ |
@@ -26,7 +28,15 @@ STM32 NucleoおよびDiscoveryボード向けの、SCPIで制御するGPIO・PWM
 | NUCLEO-L073RZ | `Release/NUCLEO-L073RZ.bin` |
 | STM32L0538-DISCO | `Release/Jigu-GPIO.bin` |
 
-ビルド元の情報、バイト数、SHA-256ハッシュは [tests/release-binaries.json](tests/release-binaries.json) に記録しています。これらのファイルは、記録されたソースコミットから各ボードのRelease設定で再ビルドし、生成したELFからGNU objcopyで出力したバイナリとバイト単位で比較しています。5ボードすべてで、CubeIDEのReleaseビルド時にBINファイルを自動生成します。L073も他のボードと同じツールチェーンオプション「Convert to binary file (-O binary)」を有効にしています。更新したファームウェアを公開する際は、再ビルドしてマニフェストを更新してください。
+リポジトリ直下の `Release-Firmware.ps1` をWindows PowerShell 5.1以降で実行すると、版番号を自動で繰り上げ、5ボードのRelease BINとマニフェストを更新します。
+
+```powershell
+.\Release-Firmware.ps1
+```
+
+既定のSTM32CubeIDEの場所は `C:\ST\STM32CubeIDE_2.1.1\STM32CubeIDE` です。別の場所にインストールしている場合は、`-CubeIdePath` に `stm32cubeidec.exe` のあるフォルダーを指定してください。Gitと `tar.exe` が必要です。
+
+ビルドには作業ツリーのFWソースを使い、一時フォルダーで各BINの版番号とELFから変換したBINとの一致を検証します。5ボードすべての検証が通ると、版番号・BIN・[マニフェスト](tests/release-binaries.json) が反映されます。マニフェストにはベースコミット、変更されたビルド入力のSHA-256（削除は `null`）、各BINのサイズとSHA-256を記録します。失敗時は一時フォルダーにログが残ります。リリース差分の確認後、コミットとGitタグの付与は手動で行います。
 
 ## プロジェクト構成
 
